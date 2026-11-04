@@ -62,17 +62,16 @@
 | `models`、providers 配置 | `models`、`model_prices` | 迁模型清单和单价，不迁密钥 |
 | `funding_accounts`、`lab_token_limits`、`school_quota` | `budgets`、`budget_grants` | |
 
-## 4. 导入工具
+## 4. 导入工具（SRV-003 已实现）
 
-`cmd/admin import-content`：
-
-- 输入是一个导出目录，里面是 JSON 文件，不直接连原智教云的库。
-- 导出目录由 edu-agent-jiuwen 仓库里的一个只读脚本生成，数据来源是该仓库 `platform/shared/seed.json`、`platform/scripts/lab_guides.json` 和 prepare 脚本里的结构化字段。也就是现在 agent.hrtiger.cn 线上的 FDE 内容，不是 practise.hrtiger.cn 的生产数据。
-- 品类有两处来源，要先核对再定：客户端 `edu_course/frontend/ProjectCards.tsx` 里写死的 FDE、AI 漫剧两张卡片，以及 `ai-edu-platform` 的 `feat/redesign-categories` 分支 `shared/seed.json` 里的 `categories`。后者的 `lab_types` 仍列着旧实训类型，导入时要改成 WorkSwarm。
-- 可以重复执行：同一个来源 id 只更新，不重复插入。已经被教师在新系统里改过的实训不覆盖，只报告差异。这修掉了现在 prepare 脚本每次部署都会覆盖线上修改的问题。
-- 导入后输出核对报告：课程、章节、实训、指引步骤、交付物、规则的数量，以及逐项哈希。
-
-原系统的学校、账号、作品、成绩不迁（11-03 用户确认）。
+- `scripts/export_fde_content.py` 只读地从客户端仓库导出现在 agent.hrtiger.cn 线上的 FDE 内容，生成 `seed/fde-content.json` 并提交进本仓。来源是客户端仓库的 `platform/shared/seed.json`、`platform/scripts/lab_guides.json`，以及 `prepare_workswarm_demo.py` 里工具实训的定义和评分规则，不是 practise.hrtiger.cn 的生产数据。11-03 导出自客户端 `78686ae`：2 个品类、1 门课、10 章、51 个实训（255 个指引步骤）、1 套 100 分的评分规则。
+- 品类以客户端「项目」页写死的两张卡片为准（FDE、AI 漫剧），图标存 lucide 图标名。原智教云分支里的品类表仍列着旧实训类型，没有采用。
+- `cmd/admin import-content seed/fde-content.json` 在一个事务里导入：
+  - 按来源 id 更新，可以重复执行；来源内容没变的行不写。
+  - 在新系统里编辑过的行（`edited_at` 不为空）不覆盖，在报告的 `Kept` 里列出，要人工对照。这修掉了现在 prepare 脚本每次部署都覆盖线上修改的问题。
+  - 评分规则只追加版本；教师在新系统里确认过更新的版本时，导入不再追加。
+  - 来源里删掉的行不会被删除。
+- 导入后输出报告：品类、课程、章节、实训、规则各自新建、更新、未变、保留本地修改的数量。
 
 ## 5. 切换步骤（P2）
 

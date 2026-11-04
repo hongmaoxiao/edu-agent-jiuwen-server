@@ -3,17 +3,20 @@
 //	admin create-operator <login> <display name>   # password is read from standard input, never from arguments
 //	admin create-demo <login> <display name>       # demo account, its demo school and three personas; password on standard input
 //	admin demo-reset <login>                       # remove everything opened during demos, keep the school and personas
+//	admin import-content <file>                    # import courses, labs, guides and rubrics (seed/fde-content.json); safe to rerun
 package main
 
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 	"time"
 
 	"edu-agent-jiuwen-server/internal/account"
+	"edu-agent-jiuwen-server/internal/content"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -26,17 +29,20 @@ func main() {
 }
 
 func run(args []string) error {
-	usage := fmt.Errorf("usage: admin create-operator|create-demo <login> <display name>  (password on standard input)\n       admin demo-reset <login>")
+	usage := fmt.Errorf("usage: admin create-operator|create-demo <login> <display name>  (password on standard input)\n       admin demo-reset <login>\n       admin import-content <file>")
 	if len(args) == 0 {
 		return usage
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	open := func() (*account.Service, func(), error) {
+	connect := func() (*pgxpool.Pool, error) {
 		if os.Getenv("DATABASE_URL") == "" {
-			return nil, nil, fmt.Errorf("DATABASE_URL is required")
+			return nil, fmt.Errorf("DATABASE_URL is required")
 		}
-		db, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
+		return pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
+	}
+	open := func() (*account.Service, func(), error) {
+		db, err := connect()
 		if err != nil {
 			return nil, nil, err
 		}
@@ -72,6 +78,26 @@ func run(args []string) error {
 			return err
 		}
 		fmt.Printf("demo %s reset\n", args[1])
+	case args[0] == "import-content" && len(args) == 2:
+		raw, err := os.ReadFile(args[1])
+		if err != nil {
+			return err
+		}
+		export, err := content.Decode(raw)
+		if err != nil {
+			return err
+		}
+		db, err := connect()
+		if err != nil {
+			return err
+		}
+		defer db.Close()
+		report, err := content.Import(ctx, db, export)
+		if err != nil {
+			return err
+		}
+		out, _ := json.MarshalIndent(report, "", "  ")
+		fmt.Println(string(out))
 	default:
 		return usage
 	}

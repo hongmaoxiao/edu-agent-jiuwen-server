@@ -13,6 +13,8 @@ make check                                   # 全部检查；没有 EDU_TEST_DA
 export DATABASE_URL='postgres://…/edu?sslmode=disable'
 go run ./cmd/migrate                         # 执行迁移
 printf '%s\n' '<密码>' | go run ./cmd/admin create-operator ops 运营   # 首个运营账号，密码从标准输入读
+go run ./cmd/admin import-content seed/fde-content.json                # 导入 FDE 课程，可以重复执行
+printf '%s\n' '<密码>' | go run ./cmd/admin create-demo demo 客户演示   # 演示账号（三视角切换）
 EDU_ENV=development go run ./cmd/server      # API 在 127.0.0.1:4020，指标在 127.0.0.1:4029
 ```
 

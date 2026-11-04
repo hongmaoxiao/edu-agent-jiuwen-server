@@ -16,22 +16,26 @@
     {
       "id": "SRV-002",
       "title": "P1-B 演示账号与视角切换",
-      "status": "in_progress",
+      "status": "passing",
       "scope": "演示学校、三个演示身份、POST /v1/session/perspective、演示会话只看演示学校、全局设置只读、cmd/admin demo-reset",
       "depends_on": [
         "SRV-001"
       ],
       "acceptance": "Mac 上 make check 通过（含 demo_test.go 3 个连库用例）；curl 冒烟：create-demo → 登录停在运营视角且只看到自己的演示学校 → 切换教师、学生 → 旧令牌失效 → demo-reset 后演示期间建的学校和账号消失",
-      "evidence": []
+      "evidence": [
+        "2026-11-03 Mac（Codex 任务 2336c37b）验证提交 bc5edbe：源码核对一致；make check 退出码 0，gateway 14 个用例 PASS、0 SKIP（含 demo_test.go 3 个、accounts_test.go 7 个连库用例），PostgreSQL 18.6 Docker 临时库；curl 冒烟 31 项断言全部通过（登录停在运营视角、只看到自己的演示学校、切换后旧令牌 401、boss 400、真实运营切换 403、demo-reset 后演示期间的学校和账号消失）。报告 Mac ~/Documents/Codex/agent-peer-workspace/edu-server-bc5edbe/REPORT.md"
+      ]
     },
     {
       "id": "SRV-003",
       "title": "P1-C 课程内容导入",
-      "status": "not_started",
-      "scope": "courses、chapters、labs、指引、评分规则表；cmd/admin import-content 导入 FDE 51 个实训，可重复执行，不覆盖新系统里改过的内容",
+      "status": "in_progress",
+      "scope": "categories、courses、chapters、labs（含指引步骤）、rubrics、rubric_versions 表；scripts/export_fde_content.py 从客户端仓库只读导出 seed/fde-content.json；cmd/admin import-content 导入，可重复执行，新系统里改过的行不覆盖并在报告里列出",
       "depends_on": [
         "SRV-001"
-      ]
+      ],
+      "acceptance": "Mac 上 make check 通过（含 content 包 3 个用例，其中 1 个连库）；对临时库执行两次 import-content：第一次创建 2 个品类、1 门课、10 章、51 个实训、1 套规则，第二次全部 unchanged",
+      "evidence": []
     }
   ]
 }

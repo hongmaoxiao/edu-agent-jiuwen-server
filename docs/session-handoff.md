@@ -1,6 +1,25 @@
 # 会话交接
 
-## 2026-11-03：SRV-002 演示账号完成第一版，待 Mac 验证
+## 2026-11-03：SRV-003 课程导入完成第一版，待 Mac 验证
+
+**做了什么**
+
+- `migrations/003_content.sql`：categories、courses、chapters、labs（含 `guide_steps`）、rubrics、rubric_versions。
+- `scripts/export_fde_content.py` → `seed/fde-content.json`（导出自客户端 `78686ae`）。
+- `internal/content`：`Decode` 严格校验导入文件，`Import` 可重复执行，保留本地修改。
+- `cmd/admin import-content <file>`，输出 JSON 报告。
+- 规则见 `docs/plan/03-data-migration.md` §4。
+
+**验证**
+
+- Grok：`go build`、`go vet`、`gofmt`、`go test ./...` 通过；`TestSeedIsComplete`、`TestDecodeRejectsBrokenExports` 在 Grok 上实际跑过；连库的 `TestImportIsRepeatableAndKeepsLocalEdits` 在 Grok 上跳过，未验证。
+- Mac：待做。
+
+**下一步**
+
+- 交 Mac 验证 SRV-003。P1 后端到此完成，接着是客户端：登录页、按角色显示侧栏、视角切换器，等 Claude Design 的设计稿。
+
+## 2026-11-03：SRV-002 演示账号完成，Mac 验证通过
 
 **做了什么**
 
@@ -12,11 +31,7 @@
 **验证**
 
 - Grok：`go build`、`go vet`、`gofmt`、`go test ./...` 通过；`demo_test.go` 3 个连库用例在 Grok 上跳过，未验证。
-- Mac：待做。
-
-**下一步**
-
-- 交 Mac 验证 SRV-002，然后 SRV-003 课程导入。
+- Mac（Codex 任务 2336c37b，提交 bc5edbe）：`make check` 退出码 0，gateway 14 个用例全部 PASS、没有 SKIP；curl 冒烟 31 项断言全部通过。报告在 Mac `~/Documents/Codex/agent-peer-workspace/edu-server-bc5edbe/REPORT.md`。
 
 ## 2026-11-03：SRV-001 完成，Mac 验证通过
 
