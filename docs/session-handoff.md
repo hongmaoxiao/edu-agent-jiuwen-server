@@ -1,6 +1,6 @@
 # 会话交接
 
-## 2026-11-03：SRV-003 课程导入完成第一版，待 Mac 验证
+## 2026-11-03：SRV-003 课程导入完成，Mac 验证通过；P1 后端完成
 
 **做了什么**
 
@@ -13,11 +13,12 @@
 **验证**
 
 - Grok：`go build`、`go vet`、`gofmt`、`go test ./...` 通过；`TestSeedIsComplete`、`TestDecodeRejectsBrokenExports` 在 Grok 上实际跑过；连库的 `TestImportIsRepeatableAndKeepsLocalEdits` 在 Grok 上跳过，未验证。
-- Mac：待做。
+- Mac（Codex 任务 16766ff1，提交 9fc5178）：`make check` 退出码 0，19 个用例全部 PASS、没有 SKIP；临时库导入两次，第一次全部新建，第二次全部 unchanged；库里 51 个实训、255 个指引步骤、1 套 100 分规则。报告在 Mac `~/Documents/Codex/agent-peer-workspace/edu-server-9fc5178/verification/report.md`。
 
 **下一步**
 
-- 交 Mac 验证 SRV-003。P1 后端到此完成，接着是客户端：登录页、按角色显示侧栏、视角切换器，等 Claude Design 的设计稿。
+- P1 后端（SRV-001～003）全部通过。接下来是客户端：登录页、按角色显示侧栏、二级栏、视角切换器，等 Claude Design 的设计稿。
+- 还没做：本仓的部署脚本和备份（`deployments/production/`），上线前要做；`Idempotency-Key` 和高风险操作二次确认密码，等有对应接口时再做。
 
 ## 2026-11-03：SRV-002 演示账号完成，Mac 验证通过
 
