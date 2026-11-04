@@ -248,7 +248,7 @@
     },
     "/v1/me": {
       "get": {
-        "summary": "当前账号和所属学校及角色。首次登录未改密码时也可以调用",
+        "summary": "当前账号和所属学校及角色。首次登录未改密码时也可以调用。演示会话里 account 是当前视角的演示身份，并多一个 demo 字段",
         "tags": [
           "account"
         ],
@@ -447,6 +447,75 @@
           }
         }
       }
+    },
+    "/v1/session/perspective": {
+      "post": {
+        "summary": "演示账号切换视角（运营、教师、学生），不用重新登录。返回新的访问令牌，旧访问令牌立即失效；刷新令牌不变。普通账号调用返回 403",
+        "tags": [
+          "account"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "perspective": {
+                    "type": "string",
+                    "enum": [
+                      "operator",
+                      "teacher",
+                      "student"
+                    ]
+                  }
+                },
+                "required": [
+                  "perspective"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "已切换",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "access_token": {
+                      "type": "string"
+                    },
+                    "expires_in": {
+                      "type": "integer"
+                    },
+                    "perspective": {
+                      "type": "string",
+                      "enum": [
+                        "operator",
+                        "teacher",
+                        "student"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "access_token",
+                    "expires_in",
+                    "perspective"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -634,11 +703,49 @@
             "items": {
               "$ref": "#/components/schemas/School"
             }
+          },
+          "demo": {
+            "$ref": "#/components/schemas/DemoView"
           }
         },
         "required": [
           "account",
           "schools"
+        ]
+      },
+      "DemoView": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "只在演示会话里出现，前端据此显示视角切换器",
+        "properties": {
+          "perspective": {
+            "type": "string",
+            "enum": [
+              "operator",
+              "teacher",
+              "student"
+            ]
+          },
+          "perspectives": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "operator",
+                "teacher",
+                "student"
+              ]
+            }
+          },
+          "display_name": {
+            "type": "string",
+            "description": "登录的演示账号的名字"
+          }
+        },
+        "required": [
+          "perspective",
+          "perspectives",
+          "display_name"
         ]
       }
     }

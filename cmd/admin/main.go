@@ -1,6 +1,8 @@
 // Command admin runs operator tasks against the database in DATABASE_URL.
 //
 //	admin create-operator <login> <display name>   # password is read from standard input, never from arguments
+//	admin create-demo <login> <display name>       # demo account, its demo school and three personas; password on standard input
+//	admin demo-reset <login>                       # remove everything opened during demos, keep the school and personas
 package main
 
 import (
@@ -24,27 +26,54 @@ func main() {
 }
 
 func run(args []string) error {
-	if len(args) != 3 || args[0] != "create-operator" {
-		return fmt.Errorf("usage: admin create-operator <login> <display name>  (password on standard input)")
-	}
-	password, err := bufio.NewReader(os.Stdin).ReadString('\n')
-	if err != nil && password == "" {
-		return fmt.Errorf("read password from standard input: %w", err)
+	usage := fmt.Errorf("usage: admin create-operator|create-demo <login> <display name>  (password on standard input)\n       admin demo-reset <login>")
+	if len(args) == 0 {
+		return usage
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	if os.Getenv("DATABASE_URL") == "" {
-		return fmt.Errorf("DATABASE_URL is required")
+	open := func() (*account.Service, func(), error) {
+		if os.Getenv("DATABASE_URL") == "" {
+			return nil, nil, fmt.Errorf("DATABASE_URL is required")
+		}
+		db, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
+		if err != nil {
+			return nil, nil, err
+		}
+		return account.New(db), db.Close, nil
 	}
-	db, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
-	if err != nil {
-		return err
+	switch {
+	case (args[0] == "create-operator" || args[0] == "create-demo") && len(args) == 3:
+		password, err := bufio.NewReader(os.Stdin).ReadString('\n')
+		if err != nil && password == "" {
+			return fmt.Errorf("read password from standard input: %w", err)
+		}
+		accounts, done, err := open()
+		if err != nil {
+			return err
+		}
+		defer done()
+		create := accounts.CreateOperator
+		if args[0] == "create-demo" {
+			create = accounts.CreateDemo
+		}
+		created, err := create(ctx, args[1], args[2], strings.TrimRight(password, "\r\n"))
+		if err != nil {
+			return err
+		}
+		fmt.Printf("%s: %s created (%s)\n", args[0], created.Login, created.ID)
+	case args[0] == "demo-reset" && len(args) == 2:
+		accounts, done, err := open()
+		if err != nil {
+			return err
+		}
+		defer done()
+		if err := accounts.ResetDemo(ctx, args[1]); err != nil {
+			return err
+		}
+		fmt.Printf("demo %s reset\n", args[1])
+	default:
+		return usage
 	}
-	defer db.Close()
-	created, err := account.New(db).CreateOperator(ctx, args[1], args[2], strings.TrimRight(password, "\r\n"))
-	if err != nil {
-		return err
-	}
-	fmt.Printf("operator %s created (%s)\n", created.Login, created.ID)
 	return nil
 }

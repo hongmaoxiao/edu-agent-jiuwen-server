@@ -19,6 +19,7 @@ func (s *Server) registerAuth() {
 	s.route("POST /v1/auth/logout", s.logout)
 	s.route("POST /v1/auth/password", s.changePassword)
 	s.route("GET /v1/me", s.me)
+	s.route("POST /v1/session/perspective", s.switchPerspective)
 }
 
 func (s *Server) setRefreshCookie(w http.ResponseWriter, tokens account.Tokens) {
@@ -172,7 +173,7 @@ func (s *Server) roles(w http.ResponseWriter, r *http.Request) (account.Roles, b
 	if !ok {
 		return account.Roles{}, false
 	}
-	roles, err := s.accounts.Roles(r.Context(), p.AccountID)
+	roles, err := s.accounts.Roles(r.Context(), p)
 	if err != nil {
 		fail(w, r, err)
 		return roles, false
@@ -213,10 +214,30 @@ func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	me, err := s.accounts.Me(r.Context(), p.AccountID)
+	me, err := s.accounts.Me(r.Context(), p)
 	if err != nil {
 		fail(w, r, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, me)
+}
+
+// switchPerspective is only for demo accounts: it moves the session to another persona and returns a new access token.
+func (s *Server) switchPerspective(w http.ResponseWriter, r *http.Request) {
+	p, ok := s.principal(w, r)
+	if !ok {
+		return
+	}
+	var body struct {
+		Perspective string `json:"perspective"`
+	}
+	if !decode(w, r, &body) {
+		return
+	}
+	tokens, err := s.accounts.SwitchPerspective(r.Context(), p, body.Perspective)
+	if err != nil {
+		fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"access_token": tokens.AccessToken, "expires_in": tokens.ExpiresIn, "perspective": body.Perspective})
 }

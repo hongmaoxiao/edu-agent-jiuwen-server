@@ -32,9 +32,17 @@ type SchoolView struct {
 	Roles  []string `json:"roles,omitempty"`
 }
 
+// DemoView appears only in demo sessions: the frontend shows the perspective switcher from it.
+type DemoView struct {
+	Perspective  string   `json:"perspective"`
+	Perspectives []string `json:"perspectives"`
+	DisplayName  string   `json:"display_name"` // the demo account that signed in
+}
+
 type Me struct {
 	Account AccountView  `json:"account"`
 	Schools []SchoolView `json:"schools"`
+	Demo    *DemoView    `json:"demo,omitempty"`
 }
 
 const accountColumns = "id,login,display_name,is_operator,can_create_courses,is_demo,must_change_password,status"
@@ -45,17 +53,24 @@ func scanAccount(row pgx.Row) (AccountView, error) {
 	return a, err
 }
 
-func (s *Service) Me(ctx context.Context, accountID string) (Me, error) {
-	account, err := scanAccount(s.db.QueryRow(ctx, "SELECT "+accountColumns+" FROM accounts WHERE id=$1", accountID))
+func (s *Service) Me(ctx context.Context, p Principal) (Me, error) {
+	account, err := scanAccount(s.db.QueryRow(ctx, "SELECT "+accountColumns+" FROM accounts WHERE id=$1", p.AccountID))
 	if err != nil {
 		return Me{}, err
 	}
-	roles, err := s.Roles(ctx, accountID)
+	// 首次登录改密码看的是登录账号本人。
+	if p.LoginAccountID != p.AccountID {
+		account.MustChangePassword = p.MustChangePassword
+	}
+	roles, err := s.Roles(ctx, p)
 	if err != nil {
 		return Me{}, err
 	}
 	me := Me{Account: account, Schools: []SchoolView{}}
-	rows, err := s.db.Query(ctx, "SELECT id,name,city,is_demo FROM schools WHERE id IN (SELECT school_id FROM school_members WHERE account_id=$1) ORDER BY name", accountID)
+	if me.Demo, err = s.demoView(ctx, p); err != nil {
+		return me, err
+	}
+	rows, err := s.db.Query(ctx, "SELECT id,name,city,is_demo FROM schools WHERE id IN (SELECT school_id FROM school_members WHERE account_id=$1) ORDER BY name", p.AccountID)
 	if err != nil {
 		return me, err
 	}
@@ -98,22 +113,25 @@ func (s *Service) CreateSchool(ctx context.Context, actor Roles, name, city stri
 		return school, err
 	}
 	defer tx.Rollback(ctx)
-	if _, err := tx.Exec(ctx, "INSERT INTO schools(id,name,city) VALUES($1,$2,$3)", school.ID, school.Name, school.City); err != nil {
+	school.IsDemo = actor.DemoOwner != ""
+	if _, err := tx.Exec(ctx, "INSERT INTO schools(id,name,city,is_demo,demo_account_id) VALUES($1,$2,$3,$4,NULLIF($5,''))", school.ID, school.Name, school.City, school.IsDemo, actor.DemoOwner); err != nil {
 		if isUniqueViolation(err) {
 			return school, fmt.Errorf("%w: 已有同名学校", ErrConflict)
 		}
 		return school, err
 	}
-	if err := audit(ctx, tx, actor.AccountID, "school.created", school.ID); err != nil {
+	if err := audit(ctx, tx, actor, "school.created", school.ID); err != nil {
 		return school, err
 	}
 	return school, tx.Commit(ctx)
 }
 
 // Schools lists every school for operators and the caller's own schools for everyone else.
+// A demo operator's "every school" is only the schools of its own demo.
 func (s *Service) Schools(ctx context.Context, actor Roles) ([]SchoolView, error) {
-	query := "SELECT id,name,city,is_demo FROM schools WHERE status='active' AND ($1 OR id IN (SELECT school_id FROM school_members WHERE account_id=$2)) ORDER BY name"
-	rows, err := s.db.Query(ctx, query, actor.Operator, actor.AccountID)
+	query := `SELECT id,name,city,is_demo FROM schools WHERE status='active'
+		AND (($1 AND ($3='' OR demo_account_id=$3)) OR id IN (SELECT school_id FROM school_members WHERE account_id=$2)) ORDER BY name`
+	rows, err := s.db.Query(ctx, query, actor.Operator, actor.AccountID, actor.DemoOwner)
 	if err != nil {
 		return nil, err
 	}
@@ -135,27 +153,28 @@ type Member struct {
 	Roles   []string    `json:"roles"`
 }
 
-func (s *Service) schoolExists(ctx context.Context, schoolID string) error {
-	var exists bool
-	if err := s.db.QueryRow(ctx, "SELECT EXISTS (SELECT 1 FROM schools WHERE id=$1 AND status='active')", schoolID).Scan(&exists); err != nil {
-		return err
+// school returns a school's demo owner ("" for a real school), or ErrNotFound when the school
+// does not exist or lies outside the actor's demo. This is the demo boundary for school-scoped requests.
+func (s *Service) school(ctx context.Context, actor Roles, schoolID string) (string, error) {
+	var owner string
+	err := s.db.QueryRow(ctx, "SELECT COALESCE(demo_account_id,'') FROM schools WHERE id=$1 AND status='active'", schoolID).Scan(&owner)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && actor.DemoOwner != "" && owner != actor.DemoOwner) {
+		return "", ErrNotFound
 	}
-	if !exists {
-		return ErrNotFound
-	}
-	return nil
+	return owner, err
 }
 
 // CreateMember opens a new account inside a school. The initial password is returned once and must be changed at first sign-in.
 func (s *Service) CreateMember(ctx context.Context, actor Roles, schoolID, login, displayName, role string) (Member, string, error) {
-	if !actor.CanGrant(schoolID, role) {
-		if role != "school_admin" && role != "teacher" && role != "student" {
-			return Member{}, "", fmt.Errorf("%w: 角色只能是 school_admin、teacher 或 student", ErrRejected)
-		}
-		return Member{}, "", ErrForbidden
+	if role != "school_admin" && role != "teacher" && role != "student" {
+		return Member{}, "", fmt.Errorf("%w: 角色只能是 school_admin、teacher 或 student", ErrRejected)
 	}
-	if err := s.schoolExists(ctx, schoolID); err != nil {
+	owner, err := s.school(ctx, actor, schoolID)
+	if err != nil {
 		return Member{}, "", err
+	}
+	if !actor.CanGrant(schoolID, role) {
+		return Member{}, "", ErrForbidden
 	}
 	normalized, err := NormalizeLogin(login)
 	if err != nil {
@@ -176,7 +195,8 @@ func (s *Service) CreateMember(ctx context.Context, actor Roles, schoolID, login
 	}
 	defer tx.Rollback(ctx)
 	id := platform.ID("acc")
-	if _, err := tx.Exec(ctx, "INSERT INTO accounts(id,login,display_name,password_hash) VALUES($1,$2,$3,$4)", id, normalized, name, hash); err != nil {
+	// 在演示学校里开的账号也归这个演示所有：同样看不到真实数据，重置时一起删掉。
+	if _, err := tx.Exec(ctx, "INSERT INTO accounts(id,login,display_name,password_hash,is_demo,demo_account_id) VALUES($1,$2,$3,$4,$5,NULLIF($6,''))", id, normalized, name, hash, owner != "", owner); err != nil {
 		if isUniqueViolation(err) {
 			return Member{}, "", fmt.Errorf("%w: 登录名已被使用", ErrConflict)
 		}
@@ -185,7 +205,7 @@ func (s *Service) CreateMember(ctx context.Context, actor Roles, schoolID, login
 	if _, err := tx.Exec(ctx, "INSERT INTO school_members(school_id,account_id,role) VALUES($1,$2,$3)", schoolID, id, role); err != nil {
 		return Member{}, "", err
 	}
-	if err := audit(ctx, tx, actor.AccountID, "account.created", id); err != nil {
+	if err := audit(ctx, tx, actor, "account.created", id); err != nil {
 		return Member{}, "", err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -196,11 +216,11 @@ func (s *Service) CreateMember(ctx context.Context, actor Roles, schoolID, login
 }
 
 func (s *Service) Members(ctx context.Context, actor Roles, schoolID string) ([]Member, error) {
+	if _, err := s.school(ctx, actor, schoolID); err != nil {
+		return nil, err
+	}
 	if !actor.ManagesSchool(schoolID) {
 		return nil, ErrForbidden
-	}
-	if err := s.schoolExists(ctx, schoolID); err != nil {
-		return nil, err
 	}
 	rows, err := s.db.Query(ctx, `SELECT a.id,a.login,a.display_name,a.is_operator,a.can_create_courses,a.is_demo,a.must_change_password,a.status,array_agg(m.role ORDER BY m.role)
 		FROM school_members m JOIN accounts a ON a.id=m.account_id WHERE m.school_id=$1 GROUP BY a.id ORDER BY a.login`, schoolID)

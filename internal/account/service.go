@@ -105,7 +105,9 @@ func (s *Service) Login(ctx context.Context, login, password string, client Clie
 	}
 	defer tx.Rollback(ctx)
 	sessionID := platform.ID("ses")
-	if _, err := tx.Exec(ctx, "INSERT INTO sessions(id,account_id,client_app,client_version,user_agent,access_hash,access_expires_at,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
+	// 演示账号登录后先停在运营视角（没有演示身份时为空，即本人）。
+	if _, err := tx.Exec(ctx, `INSERT INTO sessions(id,account_id,client_app,client_version,user_agent,access_hash,access_expires_at,expires_at,acting_account_id)
+		VALUES($1,$2,$3,$4,$5,$6,$7,$8,(SELECT persona_account_id FROM demo_personas WHERE demo_account_id=$2 AND perspective='operator'))`,
 		sessionID, id, client.App, limit(client.Version, 32), limit(client.UserAgent, 256), Hash(tokens.AccessToken), now.Add(AccessTTL), tokens.RefreshExpiresAt); err != nil {
 		return Tokens{}, err
 	}
@@ -180,9 +182,12 @@ func (s *Service) Refresh(ctx context.Context, raw string) (Tokens, error) {
 	return tokens, tx.Commit(ctx)
 }
 
+// Principal is who a request acts as. In a demo session AccountID is the demo persona and LoginAccountID
+// the demo account that signed in; otherwise both are the same account.
 type Principal struct {
-	AccountID, SessionID, ClientApp string
-	MustChangePassword              bool
+	AccountID, LoginAccountID, SessionID, ClientApp string
+	Perspective                                     string // operator / teacher / student in demo sessions
+	MustChangePassword                              bool
 }
 
 func (s *Service) Authenticate(ctx context.Context, raw string) (Principal, error) {
@@ -190,9 +195,11 @@ func (s *Service) Authenticate(ctx context.Context, raw string) (Principal, erro
 	if len(raw) < 32 || len(raw) > 128 {
 		return p, ErrInvalid
 	}
-	err := s.db.QueryRow(ctx, `SELECT s.account_id,s.id,s.client_app,a.must_change_password FROM sessions s JOIN accounts a ON a.id=s.account_id
+	err := s.db.QueryRow(ctx, `SELECT COALESCE(s.acting_account_id,s.account_id),s.account_id,s.id,s.client_app,a.must_change_password,COALESCE(d.perspective,'')
+		FROM sessions s JOIN accounts a ON a.id=s.account_id
+		LEFT JOIN demo_personas d ON d.demo_account_id=s.account_id AND d.persona_account_id=s.acting_account_id
 		WHERE s.access_hash=$1 AND s.revoked_at IS NULL AND s.access_expires_at>now() AND s.expires_at>now() AND a.status='active'`, Hash(raw)).
-		Scan(&p.AccountID, &p.SessionID, &p.ClientApp, &p.MustChangePassword)
+		Scan(&p.AccountID, &p.LoginAccountID, &p.SessionID, &p.ClientApp, &p.MustChangePassword, &p.Perspective)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return p, ErrInvalid
 	}
@@ -219,7 +226,8 @@ func (s *Service) ChangePassword(ctx context.Context, p Principal, current, next
 		return fmt.Errorf("%w: 新密码不能和原密码相同", ErrRejected)
 	}
 	var stored string
-	if err := s.db.QueryRow(ctx, "SELECT password_hash FROM accounts WHERE id=$1", p.AccountID).Scan(&stored); err != nil {
+	// 演示会话里改的是登录的演示账号本人的密码。
+	if err := s.db.QueryRow(ctx, "SELECT password_hash FROM accounts WHERE id=$1", p.LoginAccountID).Scan(&stored); err != nil {
 		return err
 	}
 	if !checkPassword(stored, current) {
@@ -234,19 +242,28 @@ func (s *Service) ChangePassword(ctx context.Context, p Principal, current, next
 		return err
 	}
 	defer tx.Rollback(ctx)
-	if _, err := tx.Exec(ctx, "UPDATE accounts SET password_hash=$1,must_change_password=false,password_changed_at=now(),updated_at=now() WHERE id=$2", hash, p.AccountID); err != nil {
+	if _, err := tx.Exec(ctx, "UPDATE accounts SET password_hash=$1,must_change_password=false,password_changed_at=now(),updated_at=now() WHERE id=$2", hash, p.LoginAccountID); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, "UPDATE sessions SET revoked_at=now() WHERE account_id=$1 AND id<>$2 AND revoked_at IS NULL", p.AccountID, p.SessionID); err != nil {
+	if _, err := tx.Exec(ctx, "UPDATE sessions SET revoked_at=now() WHERE account_id=$1 AND id<>$2 AND revoked_at IS NULL", p.LoginAccountID, p.SessionID); err != nil {
 		return err
 	}
-	if err := audit(ctx, tx, p.AccountID, "account.password_changed", p.AccountID); err != nil {
+	if err := audit(ctx, tx, Roles{AccountID: p.AccountID, LoginAccountID: p.LoginAccountID}, "account.password_changed", p.LoginAccountID); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)
 }
 
-func audit(ctx context.Context, tx pgx.Tx, accountID, action, target string) error {
-	_, err := tx.Exec(ctx, "INSERT INTO audit_events(id,account_id,action,target) VALUES($1,$2,$3,$4)", platform.ID("aud"), accountID, action, target)
+// audit records who did what. In a demo session it records the demo account and the persona it acted as.
+func audit(ctx context.Context, tx pgx.Tx, actor Roles, action, target string) error {
+	acting := ""
+	if actor.LoginAccountID != "" && actor.LoginAccountID != actor.AccountID {
+		acting = actor.AccountID
+	}
+	login := actor.LoginAccountID
+	if login == "" {
+		login = actor.AccountID
+	}
+	_, err := tx.Exec(ctx, "INSERT INTO audit_events(id,account_id,acting_account_id,action,target) VALUES($1,$2,NULLIF($3,''),$4,$5)", platform.ID("aud"), login, acting, action, target)
 	return err
 }

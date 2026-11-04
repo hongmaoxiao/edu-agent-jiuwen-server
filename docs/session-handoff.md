@@ -1,6 +1,24 @@
 # 会话交接
 
-## 2026-11-03：SRV-001 第一版完成，待 Mac 验证
+## 2026-11-03：SRV-002 演示账号完成第一版，待 Mac 验证
+
+**做了什么**
+
+- `migrations/002_demo.sql`：账号和学校加 `demo_account_id`，新表 `demo_setups`、`demo_personas`，会话加 `acting_account_id`，审计加 `acting_account_id`。
+- `POST /v1/session/perspective`；`/v1/me` 在演示会话里多一个 `demo` 字段（当前视角、可选视角、演示账号名）。
+- `cmd/admin create-demo <login> <名称>`（密码从标准输入读）、`cmd/admin demo-reset <login>`。
+- 规则见 `docs/plan/02-backend.md` §5「演示账号与视角切换」。
+
+**验证**
+
+- Grok：`go build`、`go vet`、`gofmt`、`go test ./...` 通过；`demo_test.go` 3 个连库用例在 Grok 上跳过，未验证。
+- Mac：待做。
+
+**下一步**
+
+- 交 Mac 验证 SRV-002，然后 SRV-003 课程导入。
+
+## 2026-11-03：SRV-001 完成，Mac 验证通过
 
 **做了什么**
 
@@ -18,9 +36,8 @@
 **验证**
 
 - Grok：`go build`、`go vet`、`gofmt`、`go test ./...` 通过。连库测试（`internal/gateway/accounts_test.go`）在 Grok 上**跳过**，未验证。
-- Mac：待做。
+- Mac（Codex 任务 79090165，提交 fe986e8）：源码核对一致；`make check` 退出码 0，gateway 11 个用例全部 PASS、没有 SKIP，含 7 个连库用例；curl 冒烟（迁移两次、建运营、登录、建学校、开管理员、首次改密码、开教师和学生、刷新轮换、指标端口）全部通过。PostgreSQL 是 Docker 临时容器 `postgres:18.6`。报告在 Mac `~/Documents/Codex/agent-peer-workspace/edu-server-fe986e8/REPORT.md`。
 
 **下一步**
 
-- 交 Mac：`make check`，以及本地起服务后的 curl 冒烟。
-- 然后 SRV-002 演示账号、SRV-003 课程导入。
+- SRV-002 演示账号与视角切换（进行中），然后 SRV-003 课程导入。
