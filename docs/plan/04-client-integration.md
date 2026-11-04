@@ -59,6 +59,11 @@
 
 - 网页版 agent.hrtiger.cn 现在的固定账号登录页（`deploy/agent-login/`）到 P2 下线，由新账号登录取代。
 
+## 4.1 演示账号的视角切换器
+
+- 只在 `GET /v1/me` 的返回里有 `demo` 字段时显示：`demo.perspective` 是当前视角，`demo.perspectives` 是可选视角。普通账号没有这个字段，界面上就完全没有切换器（11-04 用户确认）。
+- 切换调 `POST /v1/session/perspective`，拿到新的访问令牌后替换旧的，再重新取 `/v1/me`，按新角色刷新侧栏，停在该视角的默认页。不刷新页面，不重新登录。
+
 ## 5. 打包与部署
 
 - 桌面版：`client/scripts/build-electron-exe.*` 打包，前端用 `ELECTRON=true vite build`。Go 服务地址作为构建配置写进前端，另留一个高级设置可以改地址，方便私有部署。
