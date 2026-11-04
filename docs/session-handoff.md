@@ -1,5 +1,23 @@
 # 会话交接
 
+## 2026-11-04：Go 后端上线 agent-api.hrtiger.cn
+
+- 用户授权，由 Mac 上的 Codex 部署（任务 ac5d7782），版本 `2ade9d0`：
+  - 和 agent.hrtiger.cn 同一台机器（gpu-train）；
+  - 数据库是独立的 PostgreSQL 18.6，Docker，只监听 127.0.0.1:25432；
+  - Go 服务由 systemd 运行，用户 edu-agent，非 root；
+  - 证书单独用 Let's Encrypt 签，到期 2027-02-02，自动续期已演练。
+- 线上已有数据：FDE 课程，运营账号 `ops`，演示账号 `demo`。密码只在服务器 `/etc/edu-agent-server/accounts.json`（root 0600）。
+- 验收 1–7 全部通过。Grok 独立复核了以下几项：
+  - `/livez`、`/readyz` 返回 200，证书匹配；
+  - 跨域只放行 https://agent.hrtiger.cn，其他来源不放行；
+  - 公网访问 `/metrics` 返回 404；
+  - 错误密码返回 401；
+  - agent.hrtiger.cn 仍是 302 跳转到 /login，没有变化。
+- 配置和步骤见 `deployments/production/`。与交代不同的一处：打开了 `EDU_ALLOW_LOOPBACK_ORIGINS=true`，作用是给桌面版的本机回环来源放行跨域，不带 Cookie。
+- **未配置数据库备份**，在有真实用户数据之前必须补上。
+- 前端还没切：用户定的顺序是后端验证通过后再切前端。切前端要合并客户端分支 `feat/edu-platform-shell`，用 `VITE_EDU_API_BASE=https://agent-api.hrtiger.cn` 构建并部署，每一步都要用户确认。
+
 ## 2026-11-04：P1 客户端外壳，Mac 第三轮全部通过
 
 **做了什么**（客户端仓库 worktree `edu-agent-jiuwen-platform`，分支 `feat/edu-platform-shell`，从 main 78686ae 切出，未推送、未合并、未部署）

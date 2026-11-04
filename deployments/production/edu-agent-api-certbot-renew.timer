@@ -1,0 +1,10 @@
+[Unit]
+Description=Check agent-api.hrtiger.cn TLS certificate twice daily
+
+[Timer]
+OnCalendar=*-*-* 04,16:15:00
+RandomizedDelaySec=1800
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,9 @@
+[Unit]
+Description=Renew agent-api.hrtiger.cn TLS certificate
+After=network-online.target docker.service nginx.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/var/www/edu-agent-jiuwen-server/deployments/production/renew-certificate.sh

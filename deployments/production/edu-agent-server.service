@@ -1,0 +1,32 @@
+[Unit]
+Description=edu-agent-jiuwen Go API
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=edu-agent
+Group=edu-agent
+WorkingDirectory=/var/www/edu-agent-jiuwen-server/current
+EnvironmentFile=/etc/edu-agent-server/server.env
+ExecStart=/var/www/edu-agent-jiuwen-server/current/bin/edu-agent-server
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=20s
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target
