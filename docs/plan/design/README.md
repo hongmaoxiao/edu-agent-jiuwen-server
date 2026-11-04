@@ -1,6 +1,8 @@
 # 设计稿交接：智教云管理功能并入 jiuwen
 
-按 [05-design-brief.md](../05-design-brief.md) 出的设计稿。导出自 Claude Design 画布 https://claude.ai/artifact/1DxCHsyGyFE2aGAxuvmUCf （2026-11-04，画布版本 `1793771158-7269`；画布是私有的，同一账号下的 Claude 可以用 Artifact 工具读取，其他人要先由用户分享）。
+按 [05-design-brief.md](../05-design-brief.md) 出的设计稿。导出自 Claude Design 画布 https://claude.ai/artifact/1DxCHsyGyFE2aGAxuvmUCf （2026-11-04，画布版本 `1793771158-7269`）。
+
+**实现以本目录为准，不需要打开画布。** 本目录和已发布画布逐字节一致，核对记录见文末。画布是私有的：只有带 Artifact 工具的会话能读（出稿的会话 11-04 读取成功）；Claude Docs 工具管的是文档，读不到这个画布，会报无权限。要在浏览器里看运行效果，需要用户先从画布的 Share 菜单分享。
 
 ## 文件
 
@@ -54,3 +56,26 @@
 - 没有逐页截图检查过画面效果。
 - 没出深色模式。
 - 只有中文文案；前端规则要求中英文都进语言资源，英文由实现方补。
+
+## 核对记录
+
+2026-11-04，出稿的 Claude Code 会话用 Artifact 工具从画布下载了版本 `1793771158-7269` 的全部 14 个文件，逐个和本目录的文件做 `cmp` 比对：14 个全部一致，0 个不一致。画布服务端给出的 sha256 也和下表相同。README.md 是本目录另写的说明，不在画布里。
+
+| 文件 | 字节数 | sha256 |
+|---|---|---|
+| `canvas.json` | 3792 | `38822ab452d9a954ab59ba26cc2206279189c54d11e31e982375bae2d115b7cd` |
+| `jiuwen.css` | 53795 | `8572e22abd17b918d5080aa8605911a94873f1c5d803e1d5942e640d3acd24e0` |
+| `Main.dc.html` | 30546 | `41d0348a336d71d9a6755598e48e3f7c677492b9ef88144fdd5133842739ce18` |
+| `Shell.dc.html` | 16098 | `46a61a15ff30816edcd4f8ee773b09b808b8aa55b72379fd290425734a51ba3c` |
+| `Switcher.dc.html` | 18521 | `d46bc6afe3a949833283af0d19000c34de522dab11e881c3116a4223de8de230` |
+| `Login.dc.html` | 16518 | `9b2741e56ea91626c33ed64ed64f3696c7c1c6d5452f50c94cda4236e84e0a4c` |
+| `Overview.dc.html` | 18442 | `4b00a6629abf9e30a4cfba7e465abde30dc7e002ff3ec5364c64f43adefa6cb8` |
+| `Accounts.dc.html` | 29908 | `3e7c425f4390bcee304185673a0f9acb3aca32df552057eacf3dc1eca03edab2` |
+| `Review.dc.html` | 26842 | `84da178d827f79b1023630dab17374335c3a38d490696d657a7dcf3ead051c94` |
+| `Course.dc.html` | 25968 | `faad5a386b0741b0b9afb06a9fea9927f68c389b6f912a5110532d4123da318c` |
+| `MyWorks.dc.html` | 13225 | `bca02daf16e19186bdcf4acc8d7e0eddd3b40e4b86cf81968beb91544b69cace` |
+| `Charts.dc.html` | 18991 | `f67716882fa83893418862eb66feead0d6e0b035336b8b993f48ed3e51d0c021` |
+| `States.dc.html` | 10771 | `b486cf4acd8d17492271c448ab4c888b6346a29923e5b3e157964d77b067632e` |
+| `Spec.dc.html` | 12817 | `5c3e1991e3162488f7e1f217a23dd13161c5b92e60c9774d4409410f847a8937` |
+
+以后画布再改，要重新导出并更新这张表；表里的值和画布对不上时，以画布最新版本为准重新导出。
