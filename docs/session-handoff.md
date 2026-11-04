@@ -1,6 +1,6 @@
 # 会话交接
 
-## 2026-11-04：P1 客户端外壳，Mac 复测有条件通过
+## 2026-11-04：P1 客户端外壳，Mac 第三轮全部通过
 
 **做了什么**（客户端仓库 worktree `edu-agent-jiuwen-platform`，分支 `feat/edu-platform-shell`，从 main 78686ae 切出，未推送、未合并、未部署）
 
@@ -30,11 +30,17 @@
   - 报告：`verification-f3c5c0d/report.md`。
 - Mac 上 Go 服务要 `CGO_ENABLED=0` 才能编译。本机 SDK 的 `.tbd` 有 `arm64e.x1` 链接错误，不是代码问题。
 
+- Mac 第三轮（任务 8c49d97d，验证客户端 ee49f7e 和后端 fef996b）全部通过：
+  - 连库测试 19 PASS、0 SKIP、0 FAIL；
+  - 全新数据目录下，五个账号首次进入一次就落对页面，全程没有出现模型配置引导；
+  - admin1 用 `roles` 数组建成「教师 + 学校管理员」，两个入口都在；
+  - 学生任务的深链接停在该任务，没被跳走；
+  - 报告：Mac `verification-ee49f7e/report.md`。
+
 **遗留**
 
-- 模型配置引导抢落点：客户端 `scripts/run-client.sh` 和 `deploy/client-entrypoint.sh` 现在都会关掉 `setup_guide.enabled`。模型本来就由平台配置，引导没有用处。等 Mac 复测。
-- 多角色账号：`POST /v1/schools/{id}/members` 的请求体从 `role` 改成 `roles` 数组，可以一次建「教师 + 学校管理员」；任命学校管理员仍然只有运营能做。连库用例等 Mac 跑。
-- 已有任务链接打开时不跳走：未验证。
+- 模型配置引导抢落点：客户端 `scripts/run-client.sh` 和 `deploy/client-entrypoint.sh` 现在都会关掉 `setup_guide.enabled`。模型本来就由平台配置，引导没有用处。Mac 第三轮已验证。
+- 多角色账号：`POST /v1/schools/{id}/members` 的请求体从 `role` 改成 `roles` 数组，可以一次建「教师 + 学校管理员」；任命学校管理员仍然只有运营能做。Mac 第三轮已验证。
 
 ## 2026-11-03：SRV-003 课程导入完成，Mac 验证通过；P1 后端完成
 
