@@ -15,6 +15,8 @@
 - 设计稿交接在本仓 `docs/plan/design/`（a0203c5）。
 - 只有构建时设了 `VITE_EDU_API_BASE` 才生效；不设时和 main 一样。
 
+- 设计稿逐字节核对：出稿会话用 Artifact 工具从画布下载 14 个文件，`cmp` 全部一致，记在 `docs/plan/design/README.md` 文末。本会话按该表逐个比对本地文件的字节数和 sha256，14/14 一致。
+
 **验证**
 
 - Mac 第一轮（Codex 任务 f5bf6416，验证 984075b）：
@@ -30,8 +32,8 @@
 
 **遗留**
 
-- **P2 前必须处理**：凡是打开 edu_platform 的环境，客户端都要设 `setup_guide_enabled: false`。每人容器都是新数据目录，不关的话每个新学员第一次都会落到「任务」。
-- `POST /v1/schools/{id}/members` 一次只能给一个 `role`，接口建不出「教师 + 学校管理员」这样的多角色账号。Mac 测试是直接往库里插的。要补接口，排期待定。
+- 模型配置引导抢落点：客户端 `scripts/run-client.sh` 和 `deploy/client-entrypoint.sh` 现在都会关掉 `setup_guide.enabled`。模型本来就由平台配置，引导没有用处。等 Mac 复测。
+- 多角色账号：`POST /v1/schools/{id}/members` 的请求体从 `role` 改成 `roles` 数组，可以一次建「教师 + 学校管理员」；任命学校管理员仍然只有运营能做。连库用例等 Mac 跑。
 - 已有任务链接打开时不跳走：未验证。
 
 ## 2026-11-03：SRV-003 课程导入完成，Mac 验证通过；P1 后端完成

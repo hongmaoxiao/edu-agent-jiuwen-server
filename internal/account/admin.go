@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -165,16 +166,26 @@ func (s *Service) school(ctx context.Context, actor Roles, schoolID string) (str
 }
 
 // CreateMember opens a new account inside a school. The initial password is returned once and must be changed at first sign-in.
-func (s *Service) CreateMember(ctx context.Context, actor Roles, schoolID, login, displayName, role string) (Member, string, error) {
-	if role != "school_admin" && role != "teacher" && role != "student" {
-		return Member{}, "", fmt.Errorf("%w: 角色只能是 school_admin、teacher 或 student", ErrRejected)
+// CreateMember opens an account with one or more roles in a school, e.g. a teacher who is also the school admin.
+func (s *Service) CreateMember(ctx context.Context, actor Roles, schoolID, login, displayName string, roles []string) (Member, string, error) {
+	slices.Sort(roles)
+	roles = slices.Compact(roles)
+	if len(roles) == 0 {
+		return Member{}, "", fmt.Errorf("%w: 至少要给一个角色", ErrRejected)
+	}
+	for _, role := range roles {
+		if role != "school_admin" && role != "teacher" && role != "student" {
+			return Member{}, "", fmt.Errorf("%w: 角色只能是 school_admin、teacher 或 student", ErrRejected)
+		}
 	}
 	owner, err := s.school(ctx, actor, schoolID)
 	if err != nil {
 		return Member{}, "", err
 	}
-	if !actor.CanGrant(schoolID, role) {
-		return Member{}, "", ErrForbidden
+	for _, role := range roles {
+		if !actor.CanGrant(schoolID, role) {
+			return Member{}, "", ErrForbidden
+		}
 	}
 	normalized, err := NormalizeLogin(login)
 	if err != nil {
@@ -202,7 +213,7 @@ func (s *Service) CreateMember(ctx context.Context, actor Roles, schoolID, login
 		}
 		return Member{}, "", err
 	}
-	if _, err := tx.Exec(ctx, "INSERT INTO school_members(school_id,account_id,role) VALUES($1,$2,$3)", schoolID, id, role); err != nil {
+	if _, err := tx.Exec(ctx, "INSERT INTO school_members(school_id,account_id,role) SELECT $1,$2,unnest($3::text[])", schoolID, id, roles); err != nil {
 		return Member{}, "", err
 	}
 	if err := audit(ctx, tx, actor, "account.created", id); err != nil {
@@ -212,7 +223,7 @@ func (s *Service) CreateMember(ctx context.Context, actor Roles, schoolID, login
 		return Member{}, "", err
 	}
 	account, err := scanAccount(s.db.QueryRow(ctx, "SELECT "+accountColumns+" FROM accounts WHERE id=$1", id))
-	return Member{Account: account, Roles: []string{role}}, password, err
+	return Member{Account: account, Roles: roles}, password, err
 }
 
 func (s *Service) Members(ctx context.Context, actor Roles, schoolID string) ([]Member, error) {

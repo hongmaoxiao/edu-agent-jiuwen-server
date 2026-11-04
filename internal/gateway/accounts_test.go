@@ -91,7 +91,7 @@ func (h *harness) mustLogin(login, password, app string) string {
 // member opens an account in a school and returns its initial password.
 func (h *harness) member(token, school, login, role string) string {
 	h.t.Helper()
-	r := h.do("POST", "/v1/schools/"+school+"/members", token, map[string]string{"login": login, "display_name": login, "role": role}, nil)
+	r := h.do("POST", "/v1/schools/"+school+"/members", token, map[string]any{"login": login, "display_name": login, "roles": []string{role}}, nil)
 	if r.code != 201 {
 		h.t.Fatalf("create %s: %d %v", login, r.code, r.body)
 	}
@@ -168,10 +168,10 @@ func TestWhoMayOpenAccounts(t *testing.T) {
 
 	h.member(admin, a, "teacher-a", "teacher")
 	h.member(admin, a, "student-a", "student")
-	if r := h.do("POST", "/v1/schools/"+a+"/members", admin, map[string]string{"login": "admin-a2", "display_name": "x", "role": "school_admin"}, nil); r.code != 403 {
+	if r := h.do("POST", "/v1/schools/"+a+"/members", admin, map[string]any{"login": "admin-a2", "display_name": "x", "roles": []string{"school_admin"}}, nil); r.code != 403 {
 		t.Errorf("school admin appointed another admin: %d", r.code)
 	}
-	if r := h.do("POST", "/v1/schools/"+b+"/members", admin, map[string]string{"login": "student-b", "display_name": "x", "role": "student"}, nil); r.code != 403 {
+	if r := h.do("POST", "/v1/schools/"+b+"/members", admin, map[string]any{"login": "student-b", "display_name": "x", "roles": []string{"student"}}, nil); r.code != 403 {
 		t.Errorf("school admin opened an account in another school: %d", r.code)
 	}
 	if r := h.do("GET", "/v1/schools/"+b+"/members", admin, nil, nil); r.code != 403 {
@@ -180,28 +180,44 @@ func TestWhoMayOpenAccounts(t *testing.T) {
 	if r := h.do("POST", "/v1/schools", admin, map[string]string{"name": "学校丙"}, nil); r.code != 403 {
 		t.Errorf("school admin created a school: %d", r.code)
 	}
-	if r := h.do("POST", "/v1/schools/"+a+"/members", admin, map[string]string{"login": "teacher-a", "display_name": "x", "role": "student"}, nil); r.code != 409 {
+	if r := h.do("POST", "/v1/schools/"+a+"/members", admin, map[string]any{"login": "teacher-a", "display_name": "x", "roles": []string{"student"}}, nil); r.code != 409 {
 		t.Errorf("duplicate login: %d", r.code)
 	}
-	if r := h.do("POST", "/v1/schools/"+a+"/members", admin, map[string]string{"login": "x", "display_name": "x", "role": "student"}, nil); r.code != 400 {
+	if r := h.do("POST", "/v1/schools/"+a+"/members", admin, map[string]any{"login": "x", "display_name": "x", "roles": []string{"student"}}, nil); r.code != 400 {
 		t.Errorf("invalid login accepted: %d", r.code)
 	}
-	if r := h.do("POST", "/v1/schools/"+a+"/members", admin, map[string]string{"login": "someone", "display_name": "x", "role": "boss"}, nil); r.code != 400 {
+	if r := h.do("POST", "/v1/schools/"+a+"/members", admin, map[string]any{"login": "someone", "display_name": "x", "roles": []string{"boss"}}, nil); r.code != 400 {
 		t.Errorf("unknown role accepted: %d", r.code)
 	}
-	if r := h.do("POST", "/v1/schools/sch_missing/members", ops, map[string]string{"login": "ghost", "display_name": "x", "role": "student"}, nil); r.code != 404 {
+	if r := h.do("POST", "/v1/schools/"+a+"/members", admin, map[string]any{"login": "someone", "display_name": "x", "roles": []string{}}, nil); r.code != 400 {
+		t.Errorf("account without a role accepted: %d", r.code)
+	}
+	// 一个人可以同时是教师和学校管理员；任命学校管理员仍然只有运营能做。
+	if r := h.do("POST", "/v1/schools/"+a+"/members", admin, map[string]any{"login": "head-a", "display_name": "x", "roles": []string{"teacher", "school_admin"}}, nil); r.code != 403 {
+		t.Errorf("school admin appointed an admin through a second role: %d", r.code)
+	}
+	both := h.do("POST", "/v1/schools/"+a+"/members", ops, map[string]any{"login": "head-a", "display_name": "x", "roles": []string{"teacher", "school_admin", "teacher"}}, nil)
+	if roles, _ := both.body["member"].(map[string]any)["roles"].([]any); both.code != 201 || len(roles) != 2 {
+		t.Fatalf("teacher and school admin: %d %v", both.code, both.body)
+	}
+	head := h.signIn("head-a", both.str("initial_password"))
+	me := h.do("GET", "/v1/me", head, nil, nil)
+	if roles := me.body["schools"].([]any)[0].(map[string]any)["roles"].([]any); len(roles) != 2 {
+		t.Errorf("/v1/me roles for teacher and school admin: %v", me.body)
+	}
+	if r := h.do("POST", "/v1/schools/sch_missing/members", ops, map[string]any{"login": "ghost", "display_name": "x", "roles": []string{"student"}}, nil); r.code != 404 {
 		t.Errorf("missing school: %d", r.code)
 	}
 
 	teacher := h.signIn("teacher-a2", h.member(ops, a, "teacher-a2", "teacher"))
-	if r := h.do("POST", "/v1/schools/"+a+"/members", teacher, map[string]string{"login": "student-a2", "display_name": "x", "role": "student"}, nil); r.code != 403 {
+	if r := h.do("POST", "/v1/schools/"+a+"/members", teacher, map[string]any{"login": "student-a2", "display_name": "x", "roles": []string{"student"}}, nil); r.code != 403 {
 		t.Errorf("teacher opened an account: %d", r.code)
 	}
 	if r := h.do("GET", "/v1/schools/"+a+"/members", teacher, nil, nil); r.code != 403 {
 		t.Errorf("teacher listed members: %d", r.code)
 	}
 	members := h.do("GET", "/v1/schools/"+a+"/members", admin, nil, nil)
-	if list, _ := members.body["members"].([]any); members.code != 200 || len(list) != 4 {
+	if list, _ := members.body["members"].([]any); members.code != 200 || len(list) != 5 {
 		t.Errorf("members of school A: %d %v", members.code, members.body)
 	}
 }

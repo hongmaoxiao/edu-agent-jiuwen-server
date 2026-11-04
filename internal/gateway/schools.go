@@ -63,14 +63,14 @@ func (s *Server) createMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		Login       string `json:"login"`
-		DisplayName string `json:"display_name"`
-		Role        string `json:"role"`
+		Login       string   `json:"login"`
+		DisplayName string   `json:"display_name"`
+		Roles       []string `json:"roles"`
 	}
 	if !decode(w, r, &body) {
 		return
 	}
-	member, password, err := s.accounts.CreateMember(r.Context(), roles, r.PathValue("school"), body.Login, body.DisplayName, body.Role)
+	member, password, err := s.accounts.CreateMember(r.Context(), roles, r.PathValue("school"), body.Login, body.DisplayName, body.Roles)
 	if err != nil {
 		fail(w, r, err)
 		return

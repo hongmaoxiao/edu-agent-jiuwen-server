@@ -386,7 +386,7 @@
         }
       },
       "post": {
-        "summary": "在学校里开账号。只有运营能任命学校管理员；学校管理员能开教师和学生账号。初始密码只在本次响应里出现",
+        "summary": "在学校里开账号，可以同时给多个角色。只有运营能任命学校管理员；学校管理员能开教师和学生账号。初始密码只在本次响应里出现",
         "tags": [
           "schools"
         ],
@@ -428,19 +428,24 @@
                   "display_name": {
                     "type": "string"
                   },
-                  "role": {
-                    "type": "string",
-                    "enum": [
-                      "school_admin",
-                      "teacher",
-                      "student"
-                    ]
+                  "roles": {
+                    "type": "array",
+                    "minItems": 1,
+                    "description": "可以给多个，如教师兼学校管理员；重复的只算一次",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "school_admin",
+                        "teacher",
+                        "student"
+                      ]
+                    }
                   }
                 },
                 "required": [
                   "login",
                   "display_name",
-                  "role"
+                  "roles"
                 ]
               }
             }

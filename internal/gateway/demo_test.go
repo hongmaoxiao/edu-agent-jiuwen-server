@@ -46,7 +46,7 @@ func TestDemoSwitchesPerspectiveWithoutSigningOut(t *testing.T) {
 	if r := h.do("GET", "/v1/schools/"+real+"/members", token, nil, nil); r.code != 404 {
 		t.Errorf("demo operator reached a real school: %d", r.code)
 	}
-	if r := h.do("POST", "/v1/schools/"+real+"/members", token, map[string]string{"login": "intruder", "display_name": "x", "role": "student"}, nil); r.code != 404 {
+	if r := h.do("POST", "/v1/schools/"+real+"/members", token, map[string]any{"login": "intruder", "display_name": "x", "roles": []string{"student"}}, nil); r.code != 404 {
 		t.Errorf("demo operator opened an account in a real school: %d", r.code)
 	}
 
@@ -64,7 +64,7 @@ func TestDemoSwitchesPerspectiveWithoutSigningOut(t *testing.T) {
 		t.Errorf("teacher perspective: %v", me.body)
 	}
 	demoSchool := schools[0].(map[string]any)["id"].(string)
-	if r := h.do("POST", "/v1/schools/"+demoSchool+"/members", token, map[string]string{"login": "someone", "display_name": "x", "role": "student"}, nil); r.code != 403 {
+	if r := h.do("POST", "/v1/schools/"+demoSchool+"/members", token, map[string]any{"login": "someone", "display_name": "x", "roles": []string{"student"}}, nil); r.code != 403 {
 		t.Errorf("demo teacher opened an account: %d", r.code)
 	}
 	student := h.switchTo(token, "student")
