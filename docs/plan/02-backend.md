@@ -244,7 +244,7 @@ PostgreSQL 表 `jobs` 加 `SELECT … FOR UPDATE SKIP LOCKED`，不引入消息�
 - 配置在 `/etc/edu-agent-server/server.env`（root 0600，由 systemd 读入）；模板 `server.env.example` 提交进仓库，不含真实值。
 - PostgreSQL 18 跑在独立容器里（`compose.postgres.yaml`，镜像固定到小版本，如 `postgres:18.6`），数据卷单独命名，只听 `127.0.0.1`。注意 18 的官方镜像把数据目录改成了 `/var/lib/postgresql/18/docker`，卷要挂在 `/var/lib/postgresql`，照抄 16 的写法会把数据写在卷外面。备份用的 `pg_dump` 版本不能低于服务端。
 - nginx 只反代 API 端口，指标端口不对外。
-- 部署位置（11-03 用户确认）：和 agent.hrtiger.cn 同一台机器 `gpu-train`，单独部署，域名 `api.agent.hrtiger.cn`。这个域名**还没有解析**，所以 P1、P2 先在本地调试，上线时再配域名和证书。
+- 部署位置（11-03 用户确认）：和 agent.hrtiger.cn 同一台机器 `gpu-train`，单独部署，域名 `agent-api.hrtiger.cn`（11-04 由 `api.agent.hrtiger.cn` 改名，见决策记录）。解析已生效，但服务器上还没有这个域名的证书和 nginx 站点，所以 P1、P2 先在本地调试。上线时有两种证书办法：用公司的 `*.hrtiger.cn` 通配符证书，或用机器上已有的 certbot 单独签一张。agent.hrtiger.cn 现在用的就是 certbot 签的 Let's Encrypt 证书。
 - `gpu-train` 只有 Mac 端 Codex 能登录，所以发布由 Codex 执行 `deploy.sh`。Grok 负责准备已提交的版本和验收清单。
 - **开发与调试分工**（11-03 用户确认）：
   - Grok 上的 Claude Code 写代码，跑不依赖服务端环境的检查：`go build`、`go vet`、`gofmt`、不连数据库的单元测试。

@@ -22,7 +22,7 @@
 - **运营和学校管理员可以用桌面版**（原 Q12）。高风险写操作要求二次确认密码，高权限账号的刷新令牌缩短。
 - **原智教云只迁课程**（原 Q2），学校、账号、作品、成绩都不迁。
 - **旧实训类型全部去掉**（原 Q3）：Prompt、RAG、Coze、LangGraph、Harness 实训，以及 Jupyter、code-server 环境。
-- **部署**（原 Q7）：和 agent.hrtiger.cn 同一台机器，单独部署，域名 `api.agent.hrtiger.cn`。域名还没解析，先在本地调试，上线时再配。
+- **部署**（原 Q7）：和 agent.hrtiger.cn 同一台机器，单独部署。域名原定 `api.agent.hrtiger.cn`，11-04 按公司 IT 建议改为 `agent-api.hrtiger.cn`：公司的 `*.hrtiger.cn` 通配符证书只覆盖一级子域，`api.agent` 是三级，不在范围内。IT 已解析到 117.50.226.14，和 agent.hrtiger.cn 同机。证书和 nginx 站点上线时再配。
 - **Go 尽可能用新版本**：建仓时用最新稳定版（当日为 1.27.3）。
 
 - **开发与调试分工**：Grok 上的 Claude Code 开发，经 agent_peer 交给 Mac 上的 Codex 调试和验证体验；Grok 不补装 PostgreSQL 服务端和 Docker。

@@ -74,9 +74,11 @@
 
 11-03 用户确认网页版优先，和 10-29 选定的正式形态一致。
 
-- agent.hrtiger.cn 的登录页由 nginx 直接提供，是一个静态页，调 `api.agent.hrtiger.cn` 登录。Go 服务把会话 cookie 设在 `agent.hrtiger.cn` 域下，`api.agent.hrtiger.cn` 也能收到，并带 HttpOnly、Secure、SameSite=Lax。
+- agent.hrtiger.cn 的登录页由 nginx 直接提供，是一个静态页，调 `agent-api.hrtiger.cn` 登录。
+- 刷新令牌 cookie 只属于 `agent-api.hrtiger.cn`，不设 `EDU_COOKIE_DOMAIN`，带 HttpOnly、Secure、SameSite=Lax。两个域名同属 hrtiger.cn，浏览器算同站，cookie 照样随 `credentials: 'include'` 发出。不设到 `hrtiger.cn` 整个域，否则智教云 practise.hrtiger.cn 等所有子域都会收到。
+- 后果：nginx 在 agent.hrtiger.cn 上看不到这个 cookie。P2 按登录身份转发到各人容器时，要由 broker 在 agent.hrtiger.cn 上另设一个只用于转发的 cookie。
 - 登录后，broker 为这个人开好容器。nginx 按会话把 agent.hrtiger.cn 的请求转发到他自己的容器（见后端架构 §10）。
-- 容器里的 jiuwen 前端用同一个 cookie 调 `api.agent.hrtiger.cn`（`credentials: 'include'`，Go 端只允许这个来源跨域）。网页版因此不需要在前端存刷新令牌。
+- 容器里的 jiuwen 前端调 `agent-api.hrtiger.cn`（`credentials: 'include'`；Go 端 `EDU_WEB_ORIGINS=https://agent.hrtiger.cn`，只允许这个来源跨域）。网页版因此不需要在前端存刷新令牌。
 - 每个容器有自己的智能体配置，模型令牌写在里面，用量按人分开。
 - 现在的固定账号登录页（`deploy/agent-login/`）和共用实例在 P2 切换完成后下线。
 

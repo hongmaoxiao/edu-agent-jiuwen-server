@@ -15,7 +15,7 @@ type Config struct {
 	WebOrigins []string
 	// 桌面版前端在 http://127.0.0.1:<随机端口>，只用 Authorization 头，不带 Cookie（EDU_ALLOW_LOOPBACK_ORIGINS）。
 	AllowLoopbackOrigins bool
-	// 刷新 Cookie 的域（EDU_COOKIE_DOMAIN），线上设为 agent.hrtiger.cn，api 子域也能收到；为空时只属于当前主机。
+	// 刷新 Cookie 的域（EDU_COOKIE_DOMAIN）。线上留空：cookie 只属于 agent-api.hrtiger.cn，页面 agent.hrtiger.cn 与它同站，照样能带上。
 	CookieDomain string
 	// 低于这个版本的客户端返回 426（EDU_MIN_CLIENT_VERSION，形如 1.2.0）；为空时不检查。
 	MinClientVersion string

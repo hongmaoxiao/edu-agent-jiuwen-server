@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "https://api.agent.hrtiger.cn"
+      "url": "https://agent-api.hrtiger.cn"
     },
     {
       "url": "http://127.0.0.1:4020"
