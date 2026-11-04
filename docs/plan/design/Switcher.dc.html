@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>演示视角切换器</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./jiuwen.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.jw-rail-item.is-leaving{opacity:0;transform:scale(.85);transition:opacity 180ms ease,transform 180ms ease}
+.sk{border-radius:4px;background:var(--color-surface-muted)}
+.frame{position:relative;display:flex;width:300px;height:196px;overflow:hidden;border:1px solid var(--color-border-strong);border-radius:8px;background:var(--color-surface-content)}
+.frail{display:flex;flex-direction:column;align-items:center;gap:5px;width:30px;padding-top:8px;background:var(--color-sidebar-surface);border-right:1px solid var(--color-border-default)}
+.fi{width:18px;height:14px;border-radius:3px;background:var(--color-border-strong)}
+.fi.on{background:var(--color-text-secondary)}
+.fi.new{background:var(--color-action-primary)}
+.fi.gone{opacity:.25;transform:scale(.7)}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1500px; box-sizing: border-box; padding: 56px 64px; background: var(--color-surface-page); font-family: var(--font-body); color: var(--color-text-primary)">
+  <h1 style="margin: 0; font-size: 32px; font-weight: 700">演示视角切换器</h1>
+  <p style="margin: 10px 0 0; max-width: 1100px; font-size: 15px; line-height: 1.7; color: var(--color-text-tertiary)"><b style="color: var(--color-text-primary)">只有标记为演示的账号显示；普通账号（包括有多个角色的人）不显示切换器，头像也没有蓝色外环，接口同样拒绝切换。</b>标签放在侧栏底部、紧挨头像：72px 侧栏放不下横排的「演示 · 教师视角」，所以竖排成两行；放在侧栏里也不会挡住页面右上角的操作按钮。旁观者「一眼看懂现在是谁」靠切换时的名牌：大字写出视角、身份和要去的页面，停留约 1 秒。</p>
+
+  <div style="display: flex; gap: 48px; margin-top: 36px">
+    <div style="display: flex; gap: 0; height: 380px; align-items: flex-end">
+      <div class="jw-rail" style="height: 380px; justify-content: flex-end; border-radius: 12px 0 0 12px; border: 1px solid var(--color-border-default)">
+        <span class="jw-rail-item"><i class="ic i-flask" aria-hidden="true"></i><span class="jw-rail-label">实验</span></span>
+        <div class="jw-rail-spacer"></div>
+        <span class="jw-rail-item"><i class="ic i-sliders" aria-hidden="true"></i><span class="jw-rail-label">设置</span></span>
+        <span class="jw-rail-item"><i class="ic i-update" aria-hidden="true"></i><span class="jw-rail-label">更新</span></span>
+        <span class="jw-demo-chip an-box"><span class="jw-demo-chip-top">演示</span><span class="jw-demo-chip-role">教师视角</span></span>
+        <span class="jw-avatar-btn"><span class="jw-avatar is-demo">教</span></span>
+      </div>
+      <div class="jw-popover" style="position: relative; margin: 0 0 64px 8px; width: 300px; padding: 8px; animation: none">
+        <div style="padding: 6px 8px 10px"><div style="font-size: 14px; font-weight: 600">切换演示视角</div><div class="jw-meta" style="margin-top: 2px">演示学校里的固定身份，三个视角的数据互通</div></div>
+        <sc-for list="{{opts}}" as="o" hint-placeholder-count="3">
+          <span class="jw-menu-item" style="min-height: 56px; gap: 12px; background: {{o.bg}}"><span class="jw-avatar">{{o.initial}}</span><span style="flex: 1"><span style="display: block; font-weight: 500">{{o.label}}视角</span><span style="display: block; font-size: 12px; color: var(--color-text-secondary)">{{o.who}} · 进入 {{o.dest}}</span></span><sc-if value="{{o.current}}" hint-placeholder-val="{{ false }}"><i class="ic i-check" style="color: var(--color-action-primary)" aria-hidden="true"></i></sc-if></span>
+        </sc-for>
+        <div class="jw-menu-sep"></div>
+        <div class="jw-meta" style="display: flex; gap: 6px; padding: 4px 8px 6px"><i class="ic ic-12 i-lock" aria-hidden="true" style="margin-top: 2px"></i>演示视角下，模型、单价和系统配置只读</div>
+      </div>
+    </div>
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 12px; padding-top: 8px">
+      <span class="an-tag" style="align-self: flex-start">标签</span>
+      <div class="an-code">56 宽 · 上下内边距 6/7 · 圆角 8 · 下距 8<br>上行「演示」10px，下行「教师视角」12px/600<br>--color-tag-info-surface / --color-tag-info-text<br>边框 1px --color-border-accent；悬停 --color-action-primary-subtle</div>
+      <span class="an-tag" style="align-self: flex-start">头像</span>
+      <div class="an-code">演示账号加 2px --color-action-primary 外环（中间 2px 侧栏底色间隔）<br>头像文字随视角变化：运 / 教 / 学</div>
+      <span class="an-tag" style="align-self: flex-start">菜单</span>
+      <div class="an-code">300 宽 · 从标签右侧 6px 弹出，底边对齐标签 · 选项 56 高<br>每项写明身份和落点页；当前视角打勾 · --effect-chat-popover-shadow</div>
+      <span class="an-tag" style="align-self: flex-start">边界</span>
+      <div class="an-code">普通账号不渲染标签和菜单，侧栏底部只有设置、更新、头像<br>三个视角都只看演示学校；审计同时记账号和当时的视角</div>
+    </div>
+    <div style="width: 300px; display: flex; flex-direction: column; gap: 16px">
+      <div style="font-size: 14px; font-weight: 600">账号菜单</div>
+      <sc-for list="{{menus}}" as="m" hint-placeholder-count="2">
+        <div>
+          <div class="jw-meta" style="margin-bottom: 6px">{{m.kind}}</div>
+          <div class="jw-popover" style="position: relative; width: 280px; animation: none">
+            <div style="display: flex; align-items: center; gap: 12px; padding: 10px 10px 12px"><span class="jw-avatar jw-avatar-lg">{{m.initial}}</span><div><div style="font-size: 15px; font-weight: 600">{{m.name}}</div><div class="row" style="gap: 4px; margin-top: 4px"><sc-for list="{{m.tags}}" as="t" hint-placeholder-count="2"><span class="{{t.cls}}">{{t.label}}</span></sc-for></div></div></div>
+            <div style="display: flex; justify-content: space-between; padding: 6px 10px; font-size: 13px"><span class="jw-muted">当前学校</span><span>{{m.school}}</span></div>
+            <div class="jw-menu-sep"></div>
+            <span class="jw-menu-item"><i class="ic i-shield" aria-hidden="true"></i>个人信息与安全</span>
+            <span class="jw-menu-item"><i class="ic i-logout" aria-hidden="true"></i>退出登录</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <h2 class="an-h" style="margin-top: 48px">切换过程：约 1.8 秒，不刷新、不重新登录</h2>
+  <div style="display: flex; gap: 20px; margin-top: 18px">
+    <sc-for list="{{frames}}" as="f" hint-placeholder-count="4">
+      <div style="width: 300px">
+        <div class="frame">
+          <div class="frail"><sc-for list="{{f.items}}" as="it" hint-placeholder-count="7"><span class="{{it}}"></span></sc-for></div>
+          <div style="flex: 1; padding: 14px; opacity: {{f.contentOpacity}}">
+            <div class="sk" style="width: 90px; height: 12px; background: var(--color-border-strong)"></div>
+            <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 12px"><div class="sk" style="height: 34px"></div><div class="sk" style="height: 34px"></div><div class="sk" style="height: 34px"></div></div>
+            <div class="sk" style="height: 70px; margin-top: 8px"></div>
+          </div>
+          <sc-if value="{{f.menu}}" hint-placeholder-val="{{ false }}"><div style="position: absolute; left: 34px; bottom: 26px; width: 110px; padding: 4px; border-radius: 6px; background: var(--color-surface-popover); box-shadow: var(--effect-chat-popover-shadow); font-size: 9px"><div style="padding: 3px 5px">运营视角</div><div style="padding: 3px 5px">教师视角 ✓</div><div style="padding: 3px 5px; border-radius: 4px; background: var(--color-surface-hover); font-weight: 600">学生视角</div></div></sc-if>
+          <sc-if value="{{f.plate}}" hint-placeholder-val="{{ false }}"><div style="position: absolute; inset: 0 0 0 30px; display: flex; align-items: center; justify-content: center"><div style="display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 12px 22px; border-radius: 10px; background: var(--color-surface-popover); box-shadow: var(--effect-shadow-xl); opacity: {{f.plateOpacity}}"><span class="jw-avatar" style="width: 24px; height: 24px; font-size: 11px">学</span><span style="font-size: 8px; color: var(--color-text-secondary)">现在是</span><span style="font-size: 13px; font-weight: 600">学生视角</span><span style="font-size: 8px; color: var(--color-text-secondary)">演示学生 · 演示学校</span></div></div></sc-if>
+          <div style="position: absolute; left: 3px; bottom: 6px; width: 24px; padding: 2px 0; border-radius: 4px; background: var(--color-tag-info-surface); color: var(--color-tag-info-text); font-size: 7px; text-align: center; line-height: 1.2">演示<br><b>{{f.chip}}</b></div>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 12px"><span class="an-tag">{{f.time}}</span><span style="font-size: 14px; font-weight: 600">{{f.title}}</span></div>
+        <div style="margin-top: 6px; font-size: 13px; line-height: 1.6; color: var(--color-text-tertiary)">{{f.desc}}</div>
+        <div class="an-code" style="margin-top: 6px">{{f.token}}</div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="display: flex; gap: 48px; margin-top: 40px; align-items: flex-start">
+    <div>
+      <div class="row" style="justify-content: space-between; margin-bottom: 10px"><span style="font-size: 14px; font-weight: 600">试一下：点侧栏底部的标签</span><span class="jw-meta">与可点击原型同一套动效</span></div>
+      <div style="position: relative; display: flex; width: 760px; height: 400px; overflow: hidden; border: 1px solid var(--color-border-default); border-radius: 12px; background: var(--color-surface-content); box-shadow: var(--effect-shadow-sm)">
+        <div class="jw-rail" style="height: 100%">
+          <sc-for list="{{rail}}" as="it" hint-placeholder-count="6"><span class="{{it.cls}}" style="min-height: 40px; margin-bottom: 4px"><i class="ic {{it.icon}}" aria-hidden="true"></i><span class="jw-rail-label">{{it.label}}</span></span></sc-for>
+          <div class="jw-rail-spacer"></div>
+          <button class="{{chipCls}}" onClick="{{toggle}}" aria-label="切换演示视角"><span class="jw-demo-chip-top">演示</span><span class="jw-demo-chip-role">{{cur.label}}视角</span></button>
+          <span class="jw-avatar-btn" style="margin-bottom: 8px"><span class="jw-avatar is-demo">{{cur.initial}}</span></span>
+        </div>
+        <div class="{{viewCls}}" style="flex: 1; padding: 28px 32px">
+          <div class="jw-meta">{{cur.dest}}</div>
+          <div style="margin-top: 4px; font-size: 22px; font-weight: 600">{{cur.page}}</div>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 20px"><div class="sk" style="height: 72px"></div><div class="sk" style="height: 72px"></div><div class="sk" style="height: 72px"></div></div>
+          <div class="sk" style="height: 160px; margin-top: 10px"></div>
+        </div>
+        <sc-if value="{{open}}" hint-placeholder-val="{{ false }}">
+          <div class="jw-popover" style="left: 78px; bottom: 52px; width: 300px; padding: 8px">
+            <sc-for list="{{liveOpts}}" as="o" hint-placeholder-count="3">
+              <button class="jw-menu-item" style="min-height: 52px; gap: 12px" onClick="{{o.pick}}"><span class="jw-avatar">{{o.initial}}</span><span style="flex: 1"><span style="display: block; font-weight: 500">{{o.label}}视角</span><span style="display: block; font-size: 12px; color: var(--color-text-secondary)">进入 {{o.dest}}</span></span><sc-if value="{{o.current}}" hint-placeholder-val="{{ false }}"><i class="ic i-check" style="color: var(--color-action-primary)" aria-hidden="true"></i></sc-if></button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{plate}}" hint-placeholder-val="{{ false }}">
+          <div class="jw-plate-wrap" style="left: 72px"><div class="{{plateCls}}"><span class="jw-avatar jw-avatar-xl">{{to.initial}}</span><div class="jw-plate-kicker">现在是</div><div class="jw-plate-role">{{to.label}}视角</div><div class="jw-plate-who">{{to.who}} · 演示学校</div><div class="jw-plate-dest"><i class="ic ic-12 i-arrow" aria-hidden="true"></i>进入 {{to.dest}}</div></div></div>
+        </sc-if>
+      </div>
+    </div>
+    <div style="flex: 1; padding-top: 30px">
+      <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px">规则</div>
+      <ul style="margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.9; color: var(--color-text-tertiary)">
+        <li>切换中屏蔽再次点击；名牌期间不响应键盘。</li>
+        <li>名牌文字三层：视角（24px/600）、身份与学校（14px）、落点页（12px 胶囊）。</li>
+        <li>侧栏只动增减的那一个入口，其他入口不动，避免整条侧栏闪烁。</li>
+        <li>落点固定：运营 → 管理 · 总览，教师 → 教学 · 作品评阅，学生 → 项目。</li>
+        <li>系统开启「减少动态效果」时：不做位移和缩放，名牌直接出现 800ms 后切换。</li>
+        <li>学生视角提交的作品，切到教师视角就能评阅；切到运营视角能看到这次用量。</li>
+      </ul>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+const ROLES = {
+  operator: { label: '运营', who: '演示运营', initial: '运', dest: '管理 → 总览', page: '总览', own: 'manage' },
+  teacher: { label: '教师', who: '演示教师', initial: '教', dest: '教学 → 作品评阅', page: '作品评阅', own: 'teach' },
+  student: { label: '学生', who: '演示学生', initial: '学', dest: '项目', page: '项目', own: 'grades' }
+};
+const RAIL = [['task', '任务', 'i-task'], ['project', '项目', 'i-house'], ['grades', '成绩', 'i-award', 'student'], ['teach', '教学', 'i-presentation', 'teacher'], ['manage', '管理', 'i-building', 'operator'], ['expert', '专家', 'i-sparkles']];
+const NAV = { operator: 'manage', teacher: 'teach', student: 'project' };
+class Component extends DCLogic {
+  constructor(props) { super(props); this.timers = []; this.state = { role: 'teacher', open: false, phase: null, to: null, entering: null, leaving: null, swap: false }; }
+  componentWillUnmount() { this.timers.forEach(clearTimeout); }
+  later(ms, fn) { this.timers.push(setTimeout(fn, ms)); }
+  pick(r) {
+    const s = this.state;
+    if (r === s.role || s.phase) { this.setState({ open: false }); return; }
+    this.setState({ open: false, phase: 'out', to: r, leaving: ROLES[s.role].own });
+    this.later(200, () => this.setState({ phase: 'plate', role: r, entering: ROLES[r].own, leaving: null, swap: true }));
+    this.later(1250, () => this.setState({ phase: 'leaving' }));
+    this.later(1450, () => this.setState({ phase: 'in' }));
+    this.later(1900, () => this.setState({ phase: null, entering: null, swap: false, to: null }));
+  }
+  renderVals() {
+    const s = this.state;
+    const cur = ROLES[s.role];
+    const rail = RAIL.filter((r) => !r[3] || r[3] === s.role || r[0] === s.leaving).map((r) => {
+      let cls = 'jw-rail-item';
+      if (r[0] === NAV[s.role]) cls += ' is-active';
+      if (r[0] === s.entering) cls += ' is-entering';
+      if (r[0] === s.leaving) cls += ' is-leaving';
+      return { label: r[1], icon: r[2], cls };
+    });
+    const F = (on) => 'fi' + (on ? ' ' + on : '');
+    return {
+      opts: ['operator', 'teacher', 'student'].map((k) => ({ ...ROLES[k], current: k === 'teacher', bg: k === 'student' ? 'var(--color-surface-hover)' : 'transparent' })),
+      menus: [
+        { kind: '普通账号（多角色）', initial: '张', name: '张晓雯', school: '北辰职业技术学院', tags: [{ label: '教师', cls: 'jw-tag info' }, { label: '学校管理员', cls: 'jw-tag warning' }] },
+        { kind: '演示账号', initial: '教', name: '演示教师', school: '演示学校', tags: [{ label: '演示账号', cls: 'jw-tag info' }, { label: '教师视角', cls: 'jw-tag neutral' }] }
+      ],
+      frames: [
+        { time: '0 ms', title: '选择「学生视角」', desc: '菜单收起。此时还是教师视角，侧栏有「教学」。', token: '菜单 120ms 淡出', items: [F(), F(), F("on"), F(), F(), F()], contentOpacity: 1, menu: true, chip: '教师' },
+        { time: '0–200 ms', title: '内容淡出，旧入口收起', desc: '内容区透明度 1 → 0、下移 6px；「教学」缩小淡出。', token: '--duration-normal · --ease-out', items: [F(), F(), F('gone'), F(), F(), F()], contentOpacity: 0.15, chip: '教师' },
+        { time: '200–1450 ms', title: '名牌：现在是学生视角', desc: '名牌放大进入并停留约 1 秒；「成绩」展开并短暂高亮；标签文字换成「学生视角」。', token: '名牌 --duration-slow · 入口高亮 520ms', items: [F(), F('on'), F('new'), F(), F(), F()], contentOpacity: 0, plate: true, plateOpacity: 1, chip: '学生' },
+        { time: '1450–1800 ms', title: '落到「项目」', desc: '名牌淡出，学生的默认页上移淡入，切换结束。', token: '名牌 200ms 淡出 · 页面 --duration-slow', items: [F(), F('on'), F(), F(), F(), F()], contentOpacity: 1, chip: '学生' }
+      ],
+      rail, cur, chipCls: 'jw-demo-chip' + (s.swap ? ' is-swapping' : ''),
+      toggle: () => this.setState({ open: !s.open }), open: s.open,
+      liveOpts: ['operator', 'teacher', 'student'].map((k) => ({ ...ROLES[k], current: k === s.role, pick: () => this.pick(k) })),
+      viewCls: 'jw-view' + (s.phase === 'out' || s.phase === 'plate' ? ' is-out' : s.phase === 'in' ? ' is-in' : ''),
+      plate: s.phase === 'plate' || s.phase === 'leaving', plateCls: 'jw-plate' + (s.phase === 'leaving' ? ' is-leaving' : ''),
+      to: ROLES[s.to || s.role]
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -6,6 +6,7 @@
 - [数据迁移](plan/03-data-migration.md)
 - [客户端接入](plan/04-client-integration.md)
 - [设计说明](plan/05-design-brief.md)：交给 Claude Design
+- [设计稿交接](plan/design/README.md)：导出的画板、可点击原型、标注、图表规范、状态总表
 - [决策记录](decisions.md)
 - [最新交接](session-handoff.md)
 - 接口契约：[`api/openapi.json`](../api/openapi.json)

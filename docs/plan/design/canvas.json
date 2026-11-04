@@ -1,0 +1,35 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-11-03T10:00:00Z"},
+  "title": "jiuwen 智教云并入设计",
+  "launch": {"view": "canvas", "page": "proto"},
+  "pages": [
+    {"id": "proto", "name": "可点击原型"},
+    {"id": "shell", "name": "外壳与登录"},
+    {"id": "pages", "name": "关键页面"},
+    {"id": "spec", "name": "规范与状态"}
+  ],
+  "boards": {
+    "Main.dc.html": {"x": 0, "y": 0, "w": 1440, "h": 900, "title": "可点击原型", "page": "proto", "expand": "fill", "is_interactive": true},
+    "Shell.dc.html": {"x": 0, "y": 0, "w": 1680, "h": 1900, "title": "外壳 · 三种角色侧栏与二级栏", "page": "shell"},
+    "Switcher.dc.html": {"x": 1760, "y": 0, "w": 1440, "h": 1500, "title": "演示视角切换器与过渡", "page": "shell", "is_interactive": true},
+    "Login.dc.html": {"x": 3280, "y": 0, "w": 1440, "h": 900, "title": "登录流程", "page": "shell", "expand": "fill", "is_interactive": true},
+    "Overview.dc.html": {"x": 0, "y": 0, "w": 1128, "h": 1240, "title": "管理 → 总览", "page": "pages", "expand": "fill", "is_interactive": true},
+    "Accounts.dc.html": {"x": 1208, "y": 0, "w": 1128, "h": 900, "title": "管理 → 账号", "page": "pages", "expand": "fill", "is_interactive": true},
+    "Review.dc.html": {"x": 2416, "y": 0, "w": 1128, "h": 1000, "title": "教学 → 作品评阅", "page": "pages", "expand": "fill", "is_interactive": true},
+    "Course.dc.html": {"x": 3624, "y": 0, "w": 1128, "h": 1000, "title": "教学 → 课程内容", "page": "pages", "expand": "fill", "is_interactive": true},
+    "MyWorks.dc.html": {"x": 4832, "y": 0, "w": 1128, "h": 900, "title": "成绩 → 我的作品", "page": "pages", "expand": "fill", "is_interactive": true},
+    "Charts.dc.html": {"x": 0, "y": 0, "w": 1440, "h": 1680, "title": "图表视觉规范", "page": "spec"},
+    "States.dc.html": {"x": 1520, "y": 0, "w": 1440, "h": 1500, "title": "状态总表", "page": "spec"},
+    "Spec.dc.html": {"x": 3040, "y": 0, "w": 1440, "h": 1560, "title": "组件与变量标注", "page": "spec"}
+  },
+  "order": ["Main.dc.html", "Shell.dc.html", "Switcher.dc.html", "Login.dc.html", "Overview.dc.html", "Accounts.dc.html", "Review.dc.html", "Course.dc.html", "MyWorks.dc.html", "Charts.dc.html", "States.dc.html", "Spec.dc.html"],
+  "notes": {
+    "t-proto": {"x": 0, "y": -300, "text": "可点击原型：登录 → 准备环境 → 按视角进入", "kind": "title1", "maxW": 1440, "page": "proto"},
+    "s-proto": {"x": 1520, "y": 0, "w": 360, "text": "怎么点：\n1. 登录页已填好演示账号，点「登录」。\n2. 等环境准备完，进入运营视角的「管理 → 总览」。\n3. 侧栏底部「演示」标签切换运营 / 教师 / 学生，看侧栏和默认页如何变化。\n4. 二级栏右上角按钮收起；窗口窄于 1280 时二级栏改为浮层。\n5. 头像打开账号菜单，「退出登录」回到登录页。\n6. 在调整项里把「账号类型」改成普通账号：切换器消失，头像没有蓝色外环，账号菜单换成普通用户；改成社会学员：没有学校，当前教学班是社会班，账号菜单显示所在教学班。\n7. 运营的管理二级栏顶部可切「全平台 / 学校 / 社会班」。", "fill": "blue", "size": "m", "page": "proto"},
+    "t-shell": {"x": 0, "y": -300, "text": "外壳与登录：一条图标侧栏，按角色增减入口", "kind": "title1", "maxW": 4720, "page": "shell"},
+    "t-pages": {"x": 0, "y": -300, "text": "关键页面：内容区（1440 宽、二级栏展开时 1128px）", "kind": "title1", "maxW": 5960, "page": "pages"},
+    "t-spec": {"x": 0, "y": -300, "text": "规范：图表、状态总表、组件与变量", "kind": "title1", "maxW": 4480, "page": "spec"}
+  },
+  "designSystems": []
+}

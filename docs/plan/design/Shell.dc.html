@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>外壳 · 侧栏与二级栏</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./jiuwen.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.mini .jw-sec{position:relative !important;transform:none !important;box-shadow:none !important}
+.blk{display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--color-text-secondary)}
+</style>
+</helmet>
+<div style="width: 1680px; height: 1900px; box-sizing: border-box; padding: 56px 64px; background: var(--color-surface-page); font-family: var(--font-body); color: var(--color-text-primary)">
+  <div style="display: flex; align-items: baseline; gap: 24px">
+    <h1 style="margin: 0; font-size: 32px; font-weight: 700">外壳：一条图标侧栏，按角色增减入口</h1>
+    <span class="an" style="display: inline-flex; align-items: center; gap: 6px"><span class="jw-new-dot" style="position: static"></span>本次新增入口</span>
+    <span class="an">粉色为标注，不进产品</span>
+  </div>
+  <p style="margin: 10px 0 0; font-size: 15px; color: var(--color-text-tertiary); max-width: 1100px; line-height: 1.7">顺序固定：任务、项目、成绩、教学、管理、专家、技能、扩展、实验；底部设置、更新、账号。没有的入口直接不出现，不占位、不置灰。一个人有多个角色时，入口同时出现。<b style="color: var(--color-text-primary)">下面四种都是普通账号：底部只有设置、更新和头像，没有演示视角切换器</b>；切换器只对标记为演示的账号出现，见「演示视角切换器」。</p>
+
+  <div style="display: flex; gap: 40px; margin-top: 36px">
+    <sc-for list="{{shells}}" as="sh" hint-placeholder-count="4">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <div>
+          <div style="font-size: 18px; font-weight: 600">{{sh.role}}</div>
+          <div style="font-size: 13px; color: var(--color-text-secondary); margin-top: 2px">{{sh.note}}</div>
+        </div>
+        <div class="mini" style="display: flex; width: 312px; height: 680px; overflow: hidden; border: 1px solid var(--color-border-default); border-radius: 12px; background: var(--color-surface-content); box-shadow: var(--effect-shadow-sm)">
+          <div class="jw-rail">
+            <div class="jw-logo"><span class="jw-logo-mark"><i class="ic ic-14 i-cpu" aria-hidden="true"></i></span></div>
+            <sc-for list="{{sh.rail}}" as="it" hint-placeholder-count="8">
+              <span class="{{it.cls}}"><i class="ic {{it.icon}}" aria-hidden="true"></i><span class="jw-rail-label">{{it.label}}</span><sc-if value="{{it.isNew}}" hint-placeholder-val="{{ false }}"><span class="jw-new-dot"></span></sc-if></span>
+            </sc-for>
+            <div class="jw-rail-spacer"></div>
+            <span class="jw-rail-item"><i class="ic i-sliders" aria-hidden="true"></i><span class="jw-rail-label">设置</span></span>
+            <span class="jw-rail-item"><i class="ic i-update" aria-hidden="true"></i><span class="jw-rail-label">更新</span></span>
+            <span class="jw-avatar-btn"><span class="jw-avatar">{{sh.initial}}</span></span>
+          </div>
+          <div class="jw-sec">
+            <div class="jw-sec-inner">
+              <div class="jw-sec-head"><span class="jw-sec-title">{{sh.secTitle}}</span><span class="jw-icon-btn" style="margin-left: auto"><i class="ic i-panel" aria-hidden="true"></i></span></div>
+              <div class="jw-scope">
+                <div class="jw-scope-label">{{sh.scopeLabel}}</div>
+                <sc-if value="{{sh.seg}}" hint-placeholder-val="{{ false }}"><div class="jw-seg"><button class="is-active">全平台</button><button>学校</button><button>社会班</button></div></sc-if>
+                <sc-if value="{{sh.scopeBtn}}" hint-placeholder-val="{{ true }}"><span class="jw-scope-btn"><span class="jw-scope-main">{{sh.scopeValue}}</span><i class="ic ic-14 {{sh.scopeIcon}}" aria-hidden="true"></i></span></sc-if>
+              </div>
+              <div class="jw-sec-body">
+                <sc-for list="{{sh.groups}}" as="g" hint-placeholder-count="3">
+                  <div class="jw-sec-group">
+                    <div class="jw-sec-label">{{g.label}}</div>
+                    <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="2"><span class="{{r.cls}}"><i class="ic ic-14 {{r.icon}}" aria-hidden="true"></i>{{r.label}}<span class="count">{{r.count}}</span></span></sc-for>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="an" style="width: 312px">{{sh.annot}}</div>
+      </div>
+    </sc-for>
+
+  </div>
+
+  <div style="margin-top: 72px; display: flex; gap: 48px">
+    <div style="flex: none; width: 1000px">
+      <h2 class="an-h">二级栏：展开、收起、浮层</h2>
+      <div style="display: flex; gap: 24px; margin-top: 20px">
+        <sc-for list="{{modes}}" as="m" hint-placeholder-count="3">
+          <div style="width: 312px">
+            <div style="position: relative; display: flex; height: 200px; overflow: hidden; border: 1px solid var(--color-border-strong); border-radius: 8px; background: var(--color-surface-content)">
+              <div class="blk" style="width: 24px; background: var(--color-sidebar-surface); border-right: 1px solid var(--color-border-default)"></div>
+              <sc-if value="{{m.docked}}" hint-placeholder-val="{{ true }}"><div class="blk" style="width: 80px; background: var(--color-sidebar-surface)">二级栏 240</div></sc-if>
+              <div style="flex: 1; display: flex; flex-direction: column">
+                <sc-if value="{{m.crumb}}" hint-placeholder-val="{{ false }}"><div style="display: flex; align-items: center; gap: 4px; height: 18px; padding: 0 6px; border-bottom: 1px solid var(--color-border-default); font-size: 9px; color: var(--color-text-secondary)"><i class="ic ic-12 i-panel" aria-hidden="true"></i>管理 › 总览</div></sc-if>
+                <div class="blk" style="flex: 1">内容区</div>
+              </div>
+              <sc-if value="{{m.floating}}" hint-placeholder-val="{{ false }}">
+                <div style="position: absolute; inset: 0 0 0 24px; background: rgba(25, 25, 25, 0.4)"></div>
+                <div class="blk" style="position: absolute; top: 0; bottom: 0; left: 24px; width: 80px; background: var(--color-sidebar-surface); box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08)">浮层 240</div>
+              </sc-if>
+            </div>
+            <div style="margin-top: 10px; font-size: 14px; font-weight: 600">{{m.title}}</div>
+            <div style="margin-top: 4px; font-size: 13px; line-height: 1.6; color: var(--color-text-tertiary)">{{m.desc}}</div>
+          </div>
+        </sc-for>
+      </div>
+      <div class="jw-card" style="margin-top: 28px; padding: 18px 20px">
+        <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px">收起规则</div>
+        <ol style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.9; color: var(--color-text-tertiary)">
+          <li>二级栏属于页面内容，不是第二条侧栏。成绩、教学、管理三个入口共用一个组件，结构抄 ConversationSidebar。</li>
+          <li>窗口 ≥ 1280：默认展开，停靠在侧栏右边；标题右侧 32×32 按钮收起，宽度 240 → 0。</li>
+          <li>收起后内容区顶部出现 48px 面包屑条：展开按钮 + 「管理 › 总览」+ 当前范围，防止丢失位置。</li>
+          <li>窗口 &lt; 1280（含桌面最小 1100×720）：默认收起；展开时浮在内容区上方，带 40% 遮罩，点遮罩或选中一项后自动收起。复用 <span class="an-code">.conversation-sidebar.is-floating</span> 与 overlay。</li>
+          <li>收起状态按入口记在本地，属于界面偏好，不跟账号同步。动画 width / transform 250ms ease，与现有一致。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div style="flex: 1">
+      <h2 class="an-h">四种宽度</h2>
+      <table class="jw-table" style="margin-top: 20px; background: var(--color-surface-content); border: 1px solid var(--color-border-default)">
+        <thead><tr><th>窗口宽</th><th>二级栏</th><th class="r">内容区</th></tr></thead>
+        <tbody>
+          <sc-for list="{{bps}}" as="b" hint-placeholder-count="4">
+            <tr><td style="font-weight: 600">{{b.w}}</td><td>{{b.sec}}</td><td class="r num">{{b.c}}</td></tr>
+            <tr><td colspan="3" style="height: auto; padding: 0 12px 12px; border-top: 0; white-space: normal; font-size: 12px; line-height: 1.6; color: var(--color-text-secondary)">{{b.note}}</td></tr>
+          </sc-for>
+        </tbody>
+      </table>
+      <p class="an" style="margin-top: 12px">桌面最小窗口见 desktop/electron/main.cjs:2578。尺寸和断点与代码不一致时，以代码为准，差异由实现方记录。</p>
+    </div>
+  </div>
+
+  <div style="margin-top: 48px">
+    <div style="display: flex; align-items: center; gap: 12px"><h2 class="an-h">尺寸与变量</h2><span class="an-tag">与 SessionSidebar.css / ConversationSidebar.css 一致</span></div>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px 32px; margin-top: 18px">
+      <sc-for list="{{dims}}" as="d" hint-placeholder-count="8">
+        <div style="font-size: 13px; line-height: 1.5; padding-left: 12px; border-left: 2px solid var(--annot)"><div style="font-weight: 600">{{d.k}}</div><div class="an-code">{{d.v}}</div></div>
+      </sc-for>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1680,"height":1900}}'>
+const BASE = [['task', '任务', 'i-task'], ['project', '项目', 'i-house'], ['grades', '成绩', 'i-award'], ['teach', '教学', 'i-presentation'], ['manage', '管理', 'i-building'], ['expert', '专家', 'i-sparkles'], ['skill', '技能', 'i-zap'], ['ext', '扩展', 'i-grid'], ['lab', '实验', 'i-flask']];
+const NEW = { grades: 1, teach: 1, manage: 1 };
+function rail(keys, active) {
+  return BASE.filter((b) => !NEW[b[0]] || keys.indexOf(b[0]) >= 0).map((b) => ({ label: b[1], icon: b[2], isNew: !!NEW[b[0]], cls: 'jw-rail-item' + (b[0] === active ? ' is-active' : '') }));
+}
+function groups(defs, active) {
+  return defs.map((g) => ({ label: g[0], rows: g[1].map((r) => ({ label: r[1], icon: r[2], count: r[3] || '', cls: 'jw-sec-row' + (r[0] === active ? ' is-active' : '') })) }));
+}
+const MANAGE_ALL = [['概览', [['overview', '总览', 'i-dashboard'], ['usage', '用量', 'i-chart']]], ['院校与账号', [['schools', '院校', 'i-cap'], ['accounts', '账号', 'i-user'], ['classes', '教学班', 'i-users']]], ['资源', [['budget', '预算', 'i-wallet'], ['models', '模型', 'i-cpu']]], ['运维', [['runs', '评阅运行', 'i-activity'], ['system', '系统', 'i-server']]]];
+const MANAGE_SCHOOL = [['概览', [['overview', '总览', 'i-dashboard'], ['usage', '用量', 'i-chart']]], ['账号', [['accounts', '账号', 'i-user'], ['classes', '教学班', 'i-users']]], ['资源', [['budget', '预算', 'i-wallet']]]];
+const TEACH = [['教学班', [['classes', '教学班', 'i-users']]], ['课程', [['course', '课程内容', 'i-book'], ['rubric', '评分规则', 'i-listcheck']]], ['评阅', [['review', '作品评阅', 'i-clipcheck', '5'], ['gradebook', '成绩册', 'i-table'], ['appeals', '申诉', 'i-appeal', '1']]], ['数据', [['usage', '用量', 'i-chart']]]];
+const GRADES = [['我的', [['works', '我的作品', 'i-folder'], ['history', '历史成绩', 'i-history'], ['appeals', '申诉', 'i-appeal'], ['usage', '我的用量', 'i-chart']]]];
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      shells: [
+        { role: '学生', note: '多「成绩」· 默认进入「项目」', initial: '李', rail: rail(['grades'], 'grades'), secTitle: '成绩', scopeLabel: '当前教学班', scopeBtn: true, scopeValue: '智能体部署 · 2026 秋 1 班', scopeIcon: 'i-down', groups: groups(GRADES, 'works'),
+          annot: '学习流程不变，仍从「项目」进入实训；「成绩」只放提交记录、成绩、申诉和用量。社会学员的侧栏与此相同，当前教学班带「社会班」，账号菜单显示所在教学班而不是学校。' },
+        { role: '教师', note: '多「教学」· 默认进入「作品评阅」', initial: '陈', rail: rail(['teach'], 'teach'), secTitle: '教学', scopeLabel: '当前教学班', scopeBtn: true, scopeValue: '智能体部署 · 2026 秋 1 班', scopeIcon: 'i-down', groups: groups(TEACH, 'review'),
+          annot: '当前教学班放在二级栏顶部，取代智教云的 X-Teaching-Space-ID 和页头切换器。待办数用 12px 次要色，不用红点。' },
+        { role: '教师 + 学校管理员', note: '多角色：「教学」「管理」同时出现', initial: '张', rail: rail(['teach', 'manage'], 'manage'), secTitle: '管理', scopeLabel: '本校', scopeBtn: true, scopeValue: '北辰职业技术学院', scopeIcon: 'i-lock', groups: groups(MANAGE_SCHOOL, 'accounts'),
+          annot: '学校管理员的范围固定为本校，不能切换（锁形图标）；没有「院校」「模型」「评阅运行」「系统」。' },
+        { role: '运营', note: '多「管理」· 默认进入「总览」', initial: '郑', rail: rail(['manage'], 'manage'), secTitle: '管理', scopeLabel: '数据范围', seg: true, scopeBtn: false, groups: groups(MANAGE_ALL, 'overview'),
+          annot: '运营在二级栏顶部切换「全平台 / 学校 / 社会班」。选学校或社会班后，页面全部按范围过滤，「院校」入口隐藏。社会班不属于任何学校，只有运营和开班老师能管。' }
+      ],
+      dims: [
+        { k: '图标侧栏', v: '72px · --color-sidebar-surface · 右边框 1px --color-border-default' },
+        { k: '侧栏入口', v: '48×48 · 圆角 8 · 间距 8 · 图标 16 · 文字 10px/500' },
+        { k: '入口选中与悬停', v: '--color-sidebar-nav-active' },
+        { k: '二级栏', v: '240px · --color-sidebar-surface · 无边框（与任务页一致）' },
+        { k: '二级栏标题行', v: '高 68 · 16px/700 · 左 18 右 16' },
+        { k: '范围区', v: '左右 16 · 标签 12px --color-text-secondary · 按钮高 40 圆角 8 --color-surface-elevated' },
+        { k: '分组标题', v: '高 24 · 12px · --color-text-secondary · 左右 8' },
+        { k: '子页面行', v: '高 32 · 14px · 圆角 8 · 图标 14 · 间距 8' },
+        { k: '子页面选中', v: '--color-conversation-active-surface（= nav-active）· 字重 500' },
+        { k: '列表区内边距', v: '上 20 右 12 下 8 左 16 · 组间距 16' },
+        { k: '头像', v: '32 圆形 · --color-tag-info-surface / --color-tag-info-text' }
+      ],
+      modes: [
+        { title: '≥ 1280 · 展开（默认）', desc: '停靠在侧栏右边，内容区让出 240px。', docked: true },
+        { title: '≥ 1280 · 收起', desc: '宽度 0，内容区顶部出现面包屑条和展开按钮。', crumb: true },
+        { title: '< 1280 · 浮层', desc: '默认收起；展开时浮在内容上，带遮罩，选中后自动收起。', crumb: true, floating: true }
+      ],
+      bps: [
+        { w: '1920', sec: '展开 240', c: '1608', note: '表格显示全部列；总览指标 6 个一行；作品评阅详情区最宽。' },
+        { w: '1440', sec: '展开 240', c: '1128', note: '设计基准。关键页面按这个宽度出图。' },
+        { w: '1280', sec: '展开 240', c: '968', note: '总览指标换成 3 列两行；趋势图与模型分布上下排列。' },
+        { w: '1100 × 720', sec: '收起，浮层', c: '1028', note: '桌面客户端最小窗口。作品评阅左列表保持 320；抽屉 480 / 560 不变；表格在框内横向滚动。' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

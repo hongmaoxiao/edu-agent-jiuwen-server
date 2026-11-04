@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>组件与变量标注</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./jiuwen.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.lbl{font-size:11px;color:var(--annot);margin-top:6px}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1560px; box-sizing: border-box; padding: 56px 64px; background: var(--color-surface-page); font-family: var(--font-body); color: var(--color-text-primary)">
+  <h1 style="margin: 0; font-size: 32px; font-weight: 700">组件与变量标注</h1>
+  <p style="margin: 10px 0 0; max-width: 1100px; font-size: 15px; line-height: 1.7; color: var(--color-text-tertiary)">新页面优先复用 <span class="an-code">components/ui/</span> 里的组件。颜色只用语义变量；除图表色板外，本次没有新增颜色变量。图标用 lucide，线宽 2，常用 14 / 16。</p>
+
+  <div style="display: flex; gap: 32px; margin-top: 28px; align-items: flex-start">
+    <div style="flex: 3">
+      <table class="jw-table" style="background: var(--color-surface-content); border: 1px solid var(--color-border-default)">
+        <thead><tr><th style="width: 120px">元素</th><th style="width: 170px">组件</th><th>尺寸与变量</th></tr></thead>
+        <tbody>
+          <sc-for list="{{map}}" as="m" hint-placeholder-count="12">
+            <tr><td style="font-weight: 600; white-space: normal">{{m.el}}</td><td><span class="an-code" style="color: var(--color-text-primary)">{{m.comp}}</span><sc-if value="{{m.isNew}}" hint-placeholder-val="{{ false }}"><span class="jw-tag warning" style="margin-left: 6px">新增</span></sc-if></td><td style="white-space: normal; height: auto; padding-top: 10px; padding-bottom: 10px; font-size: 13px; line-height: 1.6; color: var(--color-text-tertiary)">{{m.spec}}</td></tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="flex: 2; display: flex; flex-direction: column; gap: 20px">
+      <div class="jw-card" style="padding: 18px 20px">
+        <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px">按钮 · 32 高（登录页 40）</div>
+        <div class="row"><span class="jw-btn primary">发布成绩</span><span class="jw-btn secondary">保存草稿</span><span class="jw-btn ghost">取消</span><span class="jw-btn danger">停用</span><span class="jw-link">重置密码</span></div>
+        <div class="lbl">primary --color-action-primary · secondary 边框 --color-border-strong · danger 文字 --color-feedback-danger · 文字链 --color-text-link</div>
+      </div>
+      <div class="jw-card" style="padding: 18px 20px">
+        <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px">标签 · ui/Tag</div>
+        <div class="row"><span class="jw-tag success">已发布</span><span class="jw-tag info">待评阅</span><span class="jw-tag warning">引用未核实</span><span class="jw-tag danger">申诉中</span><span class="jw-tag neutral">草稿</span><span class="jw-tag muted">已停用</span></div>
+        <div class="lbl">状态与颜色固定对应，全站一致；同一行最多 2 个标签</div>
+      </div>
+      <div class="jw-card" style="padding: 18px 20px">
+        <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px">输入 · 32 高 · 圆角 8</div>
+        <div class="row" style="flex-wrap: nowrap"><label class="jw-search" style="flex: 1"><i class="ic ic-14 i-search" aria-hidden="true"></i><input class="jw-input" style="width: 100%" placeholder="搜索姓名或登录名" aria-label="示例搜索"></label><span class="jw-input jw-select" style="width: 120px; display: inline-flex">全部角色<i class="ic ic-14 i-down" aria-hidden="true"></i></span></div>
+        <div class="row" style="margin-top: 10px; flex-wrap: nowrap"><input class="jw-input is-error" value="liming01" aria-label="示例错误输入" style="flex: 1"><span style="font-size: 12px; color: var(--color-feedback-danger)">登录名已存在</span></div>
+        <div class="lbl">边框 --color-border-input · 聚焦 --color-border-focus + 3px primary-subtle 光晕 · 出错 --color-feedback-danger</div>
+      </div>
+      <div class="jw-card" style="padding: 18px 20px">
+        <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px">页签 · ui/Tabs（bordered）</div>
+        <div class="jw-tabs"><button class="is-active">逐份评阅</button><button>批量复核<span class="badge">5 份异常</span></button></div>
+        <div class="lbl">间距 18 · 选中 600 + 2px --color-text-strong · 底线 --color-border-default</div>
+      </div>
+      <div class="jw-card" style="padding: 18px 20px; display: flex; flex-direction: column; gap: 8px">
+        <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px">提示条</div>
+        <div class="jw-alert info"><i class="ic ic-14 i-info" aria-hidden="true"></i><span>这是 AI 初评，正式成绩以教师发布为准。</span></div>
+        <div class="jw-alert warning"><i class="ic ic-14 i-warn" aria-hidden="true"></i><span>临时密码只显示这一次。</span></div>
+        <div class="jw-alert danger"><i class="ic ic-14 i-alert" aria-hidden="true"></i><span>账号或密码不正确，还可以再试 2 次。</span></div>
+        <div class="lbl">底色 --color-feedback-info-subtle / warning-subtle / danger-banner · 文字保持 --color-text-primary，只有图标上色</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 32px; margin-top: 32px">
+    <div class="jw-card" style="flex: 1; padding: 18px 20px">
+      <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px">字号</div>
+      <sc-for list="{{type}}" as="t" hint-placeholder-count="8">
+        <div style="display: flex; align-items: baseline; gap: 16px; padding: 4px 0; border-bottom: 1px solid var(--color-border-default)"><span class="an-code" style="width: 72px">{{t.size}}</span><span style="{{t.style}}">{{t.sample}}</span><span class="jw-meta" style="margin-left: auto">{{t.use}}</span></div>
+      </sc-for>
+    </div>
+    <div class="jw-card" style="flex: 1; padding: 18px 20px">
+      <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px">间距与圆角</div>
+      <div style="display: flex; align-items: flex-end; gap: 14px">
+        <sc-for list="{{space}}" as="s" hint-placeholder-count="8"><div style="text-align: center"><div style="width: {{s.px}}; height: {{s.px}}; background: var(--annot-subtle); outline: 1px solid var(--annot)"></div><div class="an-code" style="margin-top: 6px">{{s.v}}</div></div></sc-for>
+      </div>
+      <ul style="margin: 16px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.8; color: var(--color-text-tertiary)">
+        <li>内容区内边距 32 / 40；卡片之间 12；卡片内 20</li>
+        <li>圆角：标签 2 · 控件 8（--radius-md）· 卡片与对话框 12（--radius-lg）· 名牌 16（--radius-xl）</li>
+        <li>阴影：卡片 --effect-shadow-sm · 弹出菜单 --effect-chat-popover-shadow · 抽屉和对话框 --effect-shadow-xl</li>
+        <li>动效：--duration-fast 120 / normal 200 / slow 350 · --ease-out</li>
+      </ul>
+    </div>
+    <div class="jw-card" style="flex: 1; padding: 18px 20px">
+      <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px">新增变量（只有图表）</div>
+      <sc-for list="{{tokens}}" as="t" hint-placeholder-count="6">
+        <div style="display: flex; align-items: center; gap: 10px; padding: 5px 0"><span style="width: 16px; height: 16px; border-radius: 4px; background: {{t.css}}"></span><span class="an-code" style="flex: 1">{{t.name}}</span><span class="an-code">{{t.v}}</span></div>
+      </sc-for>
+      <p class="jw-meta" style="margin: 12px 0 0; line-height: 1.6">另需 dark.css 的对应取值：在深色表面上重新校验后再定，不直接沿用浅色值。</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      map: [
+        { el: '页标题', comp: 'PageHeader', spec: '标题 24px / 36 行高 / 600；副标题 14px 次要色，上距 4；右侧放页面级按钮' },
+        { el: '工具栏', comp: 'PageToolbar', spec: '筛选在左、批量操作在右，间距 8，可换行；勾选行后左侧换成「已选 N 个」+ 批量操作' },
+        { el: '搜索', comp: 'PageToolbarSearch', spec: '32 高，宽 240，左侧 14px 图标' },
+        { el: '下拉筛选', comp: 'Select', spec: '32 高，圆角 8，--color-border-input；宽度按最长选项' },
+        { el: '页签', comp: 'Tabs', spec: '作品评阅、课程内容用；页签行与内容间距 16–20' },
+        { el: '数据表格', comp: 'CronPanel 表格写法', spec: '表头 40 高 13px，底 --color-cron-table-header-surface；行 48 高 14px；分隔 --color-border-default；外框圆角 8；勾选列 40；宽表在框内横向滚动' },
+        { el: '状态标签', comp: 'Tag', spec: '18 高 12px 圆角 2；成功 / 信息 / 警告 / 危险 / 中性' },
+        { el: '按钮', comp: 'Button', spec: '32 高圆角 8；每个区域最多一个主按钮；文案用动词' },
+        { el: '新建与详情', comp: 'FormDrawer', spec: '表单 480，详情 560；头 60；底部按钮右对齐；遮罩 --color-overlay-cron-drawer' },
+        { el: '确认与多步', comp: 'Dialog', spec: '480；批量导入 680，带四步进度；高风险操作要求再次输入密码' },
+        { el: '弹出菜单', comp: 'DropdownMenu', spec: '圆角 12，项高 36（视角选项 56），--effect-chat-popover-shadow' },
+        { el: '指标卡与卡片', comp: 'PageCard', spec: '圆角 12，边框 --color-border-card，内边距 16–20；数值 28px/600 等宽数字' },
+        { el: '提示条', comp: 'Alert', isNew: true, spec: '圆角 8；info / warning / danger / success 四种；只给图标上色' },
+        { el: '空 / 出错 / 无权限', comp: 'EmptyState', isNew: true, spec: '图标 48 方块 + 标题 15/600 + 说明 13 + 操作；见状态总表' },
+        { el: '骨架', comp: 'Skeleton', isNew: true, spec: '--color-surface-muted 底，1.4s 微光；形状跟真实内容一致' },
+        { el: '二级栏', comp: 'SecondaryNav', isNew: true, spec: '结构、尺寸、选中态照 ConversationSidebar；范围区放顶部' },
+        { el: '演示视角', comp: 'DemoRoleSwitcher', isNew: true, spec: '侧栏底部标签 + 菜单 + 名牌；只对演示账号渲染' }
+      ],
+      type: [
+        { size: '32 / 700', sample: '设计稿标题', use: '只用于设计稿', style: 'font-size: 20px; font-weight: 700; color: var(--color-text-secondary)' },
+        { size: '24 / 600', sample: '作品评阅', use: '页标题', style: 'font-size: 24px; font-weight: 600' },
+        { size: '18 / 600', sample: '新建账号', use: '抽屉、对话框标题', style: 'font-size: 18px; font-weight: 600' },
+        { size: '16 / 600', sample: 'Token 趋势', use: '卡片标题、二级栏标题', style: 'font-size: 16px; font-weight: 600' },
+        { size: '14 / 400', sample: '执行前按 Schema 校验', use: '正文、表格', style: 'font-size: 14px' },
+        { size: '13 / 400', sample: '每日输入 + 输出 Token', use: '说明、表头、图例', style: 'font-size: 13px; color: var(--color-text-tertiary)' },
+        { size: '12 / 400', sample: '截至 14:00', use: '辅助、坐标轴、分组标题', style: 'font-size: 12px; color: var(--color-text-meta)' },
+        { size: '10 / 500', sample: '管理', use: '侧栏入口文字', style: 'font-size: 10px; font-weight: 500' }
+      ],
+      space: [4, 8, 12, 16, 20, 24, 32, 40].map((v) => ({ v, px: v + 'px' })),
+      tokens: [
+        { name: '--color-chart-series-1', v: '#2563eb', css: 'var(--color-chart-series-1)' },
+        { name: '--color-chart-series-2', v: '#c66b05', css: 'var(--color-chart-series-2)' },
+        { name: '--color-chart-series-3', v: '#0d9488', css: 'var(--color-chart-series-3)' },
+        { name: '--color-chart-series-4', v: '#6e52e0', css: 'var(--color-chart-series-4)' },
+        { name: '--color-chart-series-5', v: '#c73678', css: 'var(--color-chart-series-5)' },
+        { name: '--color-chart-other', v: '#a1a1aa', css: 'var(--color-chart-other)' },
+        { name: '--color-chart-grid', v: '= border-default', css: 'var(--color-chart-grid)' },
+        { name: '--color-chart-axis', v: '= border-strong', css: 'var(--color-chart-axis)' },
+        { name: '--color-chart-area', v: 'primary 8%', css: 'var(--color-chart-area)' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

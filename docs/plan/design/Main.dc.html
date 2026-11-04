@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>jiuwen 原型 · 演示账号</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./jiuwen.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0067d1}a:hover{color:#2563eb}
+.jw-rail-item.is-leaving{opacity:0;transform:scale(.85);transition:opacity 180ms ease,transform 180ms ease}
+.pj-card{display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--color-border-card);border-radius:12px;background:var(--color-surface-card)}
+.pj-hero{position:relative;height:144px;padding:20px 20px 16px;color:#fff}
+.pj-hero.fde{background:linear-gradient(120deg,#1d4ed8 0%,#2f6bea 55%,#7fb0f2 100%)}
+.pj-hero.comic{background:linear-gradient(120deg,#6d28d9 0%,#9333ea 55%,#e0479e 100%)}
+.pj-kicker{font-size:11px;letter-spacing:.12em;font-weight:600;opacity:.9}
+.pj-name{margin-top:6px;font-size:22px;font-weight:700}
+.pj-chips{position:absolute;right:20px;bottom:16px;display:flex;gap:10px}
+.pj-chip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:44px;height:44px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.18);font-size:10px}
+.composer{width:min(760px,100%);border:1px solid var(--color-chat-composer-border,rgba(25,25,25,.1));border-radius:16px;background:#fff;box-shadow:var(--effect-chat-composer-shadow)}
+</style>
+</helmet>
+<sc-if value="{{isLogin}}" hint-placeholder-val="{{ false }}">
+<dc-import name="Login" on-done="{{finishLogin}}" hint-size="100%,900px"></dc-import>
+</sc-if>
+<sc-if value="{{isApp}}" hint-placeholder-val="{{ true }}">
+<div class="jw-app">
+  <nav class="jw-rail" aria-label="主导航">
+    <div class="jw-logo"><span class="jw-logo-mark"><i class="ic ic-14 i-cpu" aria-hidden="true"></i></span></div>
+    <sc-for list="{{railTop}}" as="item" hint-placeholder-count="8">
+      <button class="{{item.cls}}" onClick="{{item.go}}" aria-label="{{item.label}}"><i class="ic {{item.icon}}" aria-hidden="true"></i><span class="jw-rail-label">{{item.label}}</span></button>
+    </sc-for>
+    <div class="jw-rail-spacer"></div>
+    <sc-for list="{{railBottom}}" as="item" hint-placeholder-count="2">
+      <button class="{{item.cls}}" onClick="{{item.go}}" aria-label="{{item.label}}"><i class="ic {{item.icon}}" aria-hidden="true"></i><span class="jw-rail-label">{{item.label}}</span></button>
+    </sc-for>
+    <sc-if value="{{isDemo}}" hint-placeholder-val="{{ true }}">
+    <button class="{{chipCls}}" onClick="{{toggleDemo}}" aria-label="切换演示视角，当前{{roleCfg.label}}视角" aria-expanded="{{demoOpen}}">
+      <span class="jw-demo-chip-top">演示</span>
+      <span class="jw-demo-chip-role">{{roleCfg.label}}视角</span>
+    </button>
+    </sc-if>
+    <button class="jw-avatar-btn" onClick="{{toggleAccount}}" aria-label="账号菜单" aria-expanded="{{accountOpen}}"><span class="{{avatarCls}}">{{acct.initial}}</span></button>
+  </nav>
+
+  <sc-if value="{{hasSec}}" hint-placeholder-val="{{ true }}">
+  <aside class="{{secCls}}" aria-label="{{sec.title}}">
+    <div class="jw-sec-inner">
+      <div class="jw-sec-head">
+        <span class="jw-sec-title">{{sec.title}}</span>
+        <sc-if value="{{isTask}}" hint-placeholder-val="{{ false }}"><i class="ic ic-14 i-down" aria-hidden="true" style="margin-left: 4px"></i></sc-if>
+        <button class="jw-icon-btn" style="margin-left: auto" onClick="{{collapseSec}}" aria-label="收起二级栏"><i class="ic i-panel" aria-hidden="true"></i></button>
+      </div>
+
+      <sc-if value="{{isManage}}" hint-placeholder-val="{{ true }}">
+      <div class="jw-scope">
+        <div class="jw-scope-label">数据范围</div>
+        <div class="jw-seg" role="group" aria-label="数据范围">
+          <button class="{{segPlatformCls}}" onClick="{{pickPlatform}}">全平台</button>
+          <button class="{{segSchoolCls}}" onClick="{{pickSchool}}">学校</button>
+          <button class="{{segSocialCls}}" onClick="{{pickSocial}}">社会班</button>
+        </div>
+        <sc-if value="{{scopeIsSchool}}" hint-placeholder-val="{{ false }}">
+        <button class="jw-scope-btn" style="margin-top: 8px" onClick="{{toggleScopeMenu}}">
+          <i class="ic ic-14 i-cap" aria-hidden="true"></i>
+          <span class="jw-scope-main">{{schoolLabel}}</span>
+          <i class="ic ic-14 i-down" aria-hidden="true"></i>
+        </button>
+        </sc-if>
+        <sc-if value="{{scopeIsSocial}}" hint-placeholder-val="{{ false }}"><div class="jw-meta" style="margin-top: 8px; padding: 0 2px">不属于任何学校的教学班，由运营管理</div></sc-if>
+        <sc-if value="{{demoScopeNote}}" hint-placeholder-val="{{ true }}"><div class="jw-meta" style="margin-top: 8px; padding: 0 2px">演示环境只包含演示学校和演示社会班</div></sc-if>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{hasClassScope}}" hint-placeholder-val="{{ false }}">
+      <div class="jw-scope">
+        <div class="jw-scope-label">当前教学班</div>
+        <button class="jw-scope-btn" onClick="{{toggleScopeMenu}}" aria-expanded="{{scopeOpen}}">
+          <span style="flex: 1; min-width: 0">
+            <span class="jw-scope-main" style="display: block">{{className}}</span>
+          </span>
+          <i class="ic ic-14 i-down" aria-hidden="true"></i>
+        </button>
+      </div>
+      </sc-if>
+
+      <div class="jw-sec-body">
+        <sc-if value="{{isTask}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 4px; margin: -12px 0 16px">
+            <button class="jw-sec-row"><i class="ic ic-14 i-newtask" aria-hidden="true"></i>新建任务</button>
+            <button class="jw-sec-row"><i class="ic ic-14 i-clock" aria-hidden="true"></i>定时任务</button>
+          </div>
+        </sc-if>
+        <sc-for list="{{sec.groups}}" as="group" hint-placeholder-count="3">
+          <div class="jw-sec-group">
+            <div class="jw-sec-label">{{group.label}}</div>
+            <sc-for list="{{group.rows}}" as="row" hint-placeholder-count="2">
+              <button class="{{row.cls}}" onClick="{{row.go}}"><i class="ic ic-14 {{row.icon}}" aria-hidden="true"></i><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{row.label}}</span><span class="count">{{row.count}}</span></button>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </aside>
+  </sc-if>
+  <sc-if value="{{showOverlay}}" hint-placeholder-val="{{ false }}">
+    <button class="jw-sec-overlay" onClick="{{collapseSec}}" aria-label="收起二级栏"></button>
+  </sc-if>
+
+  <main class="jw-main">
+    <sc-if value="{{showCrumb}}" hint-placeholder-val="{{ false }}">
+    <div class="jw-crumb">
+      <button class="jw-icon-btn" onClick="{{expandSec}}" aria-label="展开二级栏"><i class="ic i-panel" aria-hidden="true"></i></button>
+      <span>{{sec.title}}</span><i class="ic ic-12 i-right" aria-hidden="true"></i><strong>{{subLabel}}</strong>
+      <span style="margin-left: auto" class="jw-meta">{{scopeText}}</span>
+    </div>
+    </sc-if>
+    <div class="jw-main-scroll">
+      <div class="{{viewCls}}">
+        <sc-if value="{{show.overview}}" hint-placeholder-val="{{ false }}"><dc-import name="Overview" variant="{{ovVariant}}" demo="{{isDemo}}" hint-size="100%,1240px"></dc-import></sc-if>
+        <sc-if value="{{show.accounts}}" hint-placeholder-val="{{ false }}"><dc-import name="Accounts" scope="{{ovVariant}}" demo="{{isDemo}}" hint-size="100%,900px"></dc-import></sc-if>
+        <sc-if value="{{show.review}}" hint-placeholder-val="{{ false }}"><dc-import name="Review" team-label="{{className}}" hint-size="100%,900px"></dc-import></sc-if>
+        <sc-if value="{{show.course}}" hint-placeholder-val="{{ false }}"><dc-import name="Course" hint-size="100%,900px"></dc-import></sc-if>
+        <sc-if value="{{show.works}}" hint-placeholder-val="{{ false }}"><dc-import name="MyWorks" team-label="{{className}}" hint-size="100%,900px"></dc-import></sc-if>
+
+        <sc-if value="{{show.project}}" hint-placeholder-val="{{ false }}">
+        <div style="max-width: 924px; margin: 0 auto; padding: 32px 24px 48px">
+          <h2 style="margin: 0; font-size: 20px; font-weight: 700">项目</h2>
+          <p style="margin: 8px 0 0; font-size: 12px; color: var(--color-text-secondary)">选择一个方向，进入项目开始实训。</p>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 24px">
+            <div class="pj-card">
+              <div class="pj-hero fde">
+                <div class="pj-kicker">FORWARD DEPLOYED ENGINEER</div>
+                <div class="pj-name">FDE 项目</div>
+                <div class="pj-chips"><span class="pj-chip"><i class="ic ic-14 i-compass" aria-hidden="true"></i>场景</span><span class="pj-chip"><i class="ic ic-14 i-book" aria-hidden="true"></i>知识</span><span class="pj-chip"><i class="ic ic-14 i-cpu" aria-hidden="true"></i>智能体</span><span class="pj-chip"><i class="ic ic-14 i-send" aria-hidden="true"></i>交付</span></div>
+              </div>
+              <div style="padding: 16px 20px; font-size: 12px; color: var(--color-text-secondary)">面向企业 AI 交付：从场景判断、知识工程到智能体部署上线。</div>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin: 0 20px; padding: 14px 0 16px; border-top: 1px solid var(--color-border-default); font-size: 12px; color: var(--color-text-secondary)">1 个项目 · 51 个实训<a href="#" style="display: inline-flex; align-items: center; gap: 4px; text-decoration: none; font-weight: 500">进入<i class="ic ic-12 i-arrow" aria-hidden="true"></i></a></div>
+            </div>
+            <div class="pj-card">
+              <div class="pj-hero comic">
+                <div class="pj-kicker">AI COMIC DRAMA</div>
+                <div class="pj-name">AI 漫剧项目</div>
+                <div class="pj-chips"><span class="pj-chip"><i class="ic ic-14 i-file" aria-hidden="true"></i>剧本</span><span class="pj-chip"><i class="ic ic-14 i-grid" aria-hidden="true"></i>分镜</span><span class="pj-chip"><i class="ic ic-14 i-user" aria-hidden="true"></i>角色</span><span class="pj-chip"><i class="ic ic-14 i-folder" aria-hidden="true"></i>成片</span></div>
+              </div>
+              <div style="padding: 16px 20px; font-size: 12px; color: var(--color-text-secondary)">用 AI 完成剧本、分镜、角色与成片，做出一部完整的漫剧。</div>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin: 0 20px; padding: 14px 0 16px; border-top: 1px solid var(--color-border-default); font-size: 12px; color: var(--color-text-secondary)">内容筹备中<span class="jw-tag muted" style="border-radius: 9px">敬请期待</span></div>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{show.task}}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 140px 24px 48px">
+          <h2 style="margin: 0; font-size: 34px; font-weight: 700">WorkSwarm 轻松解决工作每个问题！</h2>
+          <div class="composer">
+            <div style="height: 76px; padding: 18px 18px 0; color: var(--color-text-placeholder); font-size: 14px">需要帮你做些什么？输入“/”快速引用技能及指令</div>
+            <div style="display: flex; align-items: center; gap: 16px; padding: 10px 14px 12px; font-size: 13px; color: var(--color-text-primary)">
+              <i class="ic i-plus" aria-hidden="true"></i><span>单Agent模式</span><span style="margin-left: auto; color: var(--color-text-secondary)">deepseek-chat</span>
+              <span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--color-surface-muted); color: var(--color-text-disabled)"><i class="ic ic-14 i-send" aria-hidden="true"></i></span>
+            </div>
+          </div>
+          <div class="jw-meta">任务页保持现状，本次不改</div>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{show.placeholder}}" hint-placeholder-val="{{ false }}">
+        <div class="jw-page">
+          <div class="jw-page-head"><div><h2 class="jw-h2">{{subLabel}}</h2><p class="jw-sub">{{scopeText}}</p></div></div>
+          <div class="jw-card" style="margin-top: 32px">
+            <div class="jw-state">
+              <div class="jw-state-icon"><i class="ic ic-20 {{placeholderIcon}}" aria-hidden="true"></i></div>
+              <div class="jw-state-title">本轮不出图</div>
+              <div class="jw-state-desc">{{placeholderText}}</div>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{show.legacy}}" hint-placeholder-val="{{ false }}">
+        <div class="jw-page">
+          <div class="jw-page-head"><div><h2 class="jw-h2">{{railLabel}}</h2><p class="jw-sub">jiuwen 原有页面，并入后保持不变。</p></div></div>
+        </div>
+        </sc-if>
+      </div>
+    </div>
+  </main>
+
+  <sc-if value="{{demoOpen}}" hint-placeholder-val="{{ false }}">
+  <div class="jw-popover" style="left: 78px; bottom: 64px; width: 300px; padding: 8px" role="menu" aria-label="切换演示视角">
+    <div style="padding: 6px 8px 10px">
+      <div style="font-size: 14px; font-weight: 600">切换演示视角</div>
+      <div class="jw-meta" style="margin-top: 2px">演示学校里的固定身份，三个视角的数据互通</div>
+    </div>
+    <sc-for list="{{roleOptions}}" as="opt" hint-placeholder-count="3">
+      <button class="jw-menu-item" style="min-height: 56px; gap: 12px" onClick="{{opt.pick}}" role="menuitemradio" aria-checked="{{opt.current}}">
+        <span class="jw-avatar">{{opt.initial}}</span>
+        <span style="flex: 1; min-width: 0">
+          <span style="display: block; font-weight: 500">{{opt.label}}视角</span>
+          <span style="display: block; font-size: 12px; color: var(--color-text-secondary)">{{opt.who}} · 进入 {{opt.dest}}</span>
+        </span>
+        <sc-if value="{{opt.current}}" hint-placeholder-val="{{ false }}"><i class="ic i-check" style="color: var(--color-action-primary)" aria-hidden="true"></i></sc-if>
+      </button>
+    </sc-for>
+    <div class="jw-menu-sep"></div>
+    <div class="jw-meta" style="display: flex; gap: 6px; padding: 4px 8px 6px"><i class="ic ic-12 i-lock" aria-hidden="true" style="margin-top: 2px"></i>演示视角下，模型、单价和系统配置只读</div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{accountOpen}}" hint-placeholder-val="{{ false }}">
+  <div class="jw-popover" style="left: 78px; bottom: 12px; width: 280px" role="menu" aria-label="账号菜单">
+    <div style="display: flex; align-items: center; gap: 12px; padding: 10px 10px 12px">
+      <span class="jw-avatar jw-avatar-lg">{{acct.initial}}</span>
+      <div style="min-width: 0">
+        <div style="font-size: 15px; font-weight: 600">{{acct.name}}</div>
+        <div class="row" style="gap: 4px; margin-top: 4px"><sc-for list="{{acct.tags}}" as="t" hint-placeholder-count="2"><span class="{{t.cls}}">{{t.label}}</span></sc-for></div>
+      </div>
+    </div>
+    <div style="display: flex; justify-content: space-between; gap: 12px; padding: 8px 10px; font-size: 13px"><span class="jw-muted" style="white-space: nowrap">{{acct.placeLabel}}</span><span style="text-align: right">{{acct.school}}</span></div>
+    <div style="display: flex; justify-content: space-between; padding: 0 10px 8px; font-size: 13px"><span class="jw-muted">登录名</span><span class="mono">{{acct.login}}</span></div>
+    <div class="jw-menu-sep"></div>
+    <button class="jw-menu-item" role="menuitem"><i class="ic i-shield" aria-hidden="true"></i>个人信息与安全</button>
+    <button class="jw-menu-item" role="menuitem" onClick="{{logout}}"><i class="ic i-logout" aria-hidden="true"></i>退出登录</button>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{scopeOpen}}" hint-placeholder-val="{{ false }}">
+  <div class="jw-popover" style="left: 88px; top: 128px; width: 248px" role="menu">
+    <sc-for list="{{scopeOptions}}" as="opt" hint-placeholder-count="2">
+      <button class="jw-menu-item" onClick="{{opt.pick}}" role="menuitemradio" aria-checked="{{opt.current}}">
+        <span style="flex: 1">{{opt.label}}</span>
+        <sc-if value="{{opt.current}}" hint-placeholder-val="{{ false }}"><i class="ic i-check" style="color: var(--color-action-primary)" aria-hidden="true"></i></sc-if>
+      </button>
+    </sc-for>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{plate}}" hint-placeholder-val="{{ false }}">
+  <div class="jw-plate-wrap" aria-live="polite">
+    <div class="{{plateCls}}">
+      <span class="jw-avatar jw-avatar-xl">{{plateRole.initial}}</span>
+      <div class="jw-plate-kicker">现在是</div>
+      <div class="jw-plate-role">{{plateRole.label}}视角</div>
+      <div class="jw-plate-who">{{plateRole.who}} · 演示学校</div>
+      <div class="jw-plate-dest"><i class="ic ic-12 i-arrow" aria-hidden="true"></i>进入 {{plateRole.dest}}</div>
+    </div>
+  </div>
+  </sc-if>
+</div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"account":{"editor":"enum","options":["演示账号","普通账号","社会学员"],"default":"演示账号"},"start":{"editor":"enum","options":["登录页","已登录"],"default":"登录页"},"startRole":{"editor":"enum","options":["运营","教师","学生"],"default":"运营"},"$preview":{"width":1440,"height":900}}'>
+const ROLES = {
+  operator: { label: '运营', who: '演示运营', initial: '运', nav: 'manage', sub: 'overview', dest: '管理 → 总览', own: 'manage' },
+  teacher: { label: '教师', who: '演示教师', initial: '教', nav: 'teach', sub: 'review', dest: '教学 → 作品评阅', own: 'teach' },
+  student: { label: '学生', who: '演示学生', initial: '学', nav: 'project', sub: null, dest: '项目', own: 'grades' }
+};
+const ROLE_BY_LABEL = { '运营': 'operator', '教师': 'teacher', '学生': 'student' };
+const RAIL = [
+  { key: 'task', label: '任务', icon: 'i-task' },
+  { key: 'project', label: '项目', icon: 'i-house' },
+  { key: 'grades', label: '成绩', icon: 'i-award', role: 'student' },
+  { key: 'teach', label: '教学', icon: 'i-presentation', role: 'teacher' },
+  { key: 'manage', label: '管理', icon: 'i-building', role: 'operator' },
+  { key: 'expert', label: '专家', icon: 'i-sparkles' },
+  { key: 'skill', label: '技能', icon: 'i-zap' },
+  { key: 'ext', label: '扩展', icon: 'i-grid' },
+  { key: 'lab', label: '实验', icon: 'i-flask' }
+];
+const RAIL_BOTTOM = [
+  { key: 'settings', label: '设置', icon: 'i-sliders' },
+  { key: 'update', label: '更新', icon: 'i-update' }
+];
+const SEC = {
+  manage: { title: '管理', groups: [
+    { label: '概览', rows: [['overview', '总览', 'i-dashboard'], ['usage', '用量', 'i-chart']] },
+    { label: '院校与账号', rows: [['schools', '院校', 'i-cap'], ['accounts', '账号', 'i-user'], ['classes', '教学班', 'i-users']] },
+    { label: '资源', rows: [['budget', '预算', 'i-wallet'], ['models', '模型', 'i-cpu']] },
+    { label: '运维', rows: [['runs', '评阅运行', 'i-activity'], ['system', '系统', 'i-server']] }
+  ] },
+  teach: { title: '教学', groups: [
+    { label: '教学班', rows: [['classes', '教学班', 'i-users']] },
+    { label: '课程', rows: [['course', '课程内容', 'i-book'], ['rubric', '评分规则', 'i-listcheck']] },
+    { label: '评阅', rows: [['review', '作品评阅', 'i-clipcheck', '5'], ['gradebook', '成绩册', 'i-table'], ['appeals', '申诉', 'i-appeal', '1']] },
+    { label: '数据', rows: [['usage', '用量', 'i-chart']] }
+  ] },
+  grades: { title: '成绩', groups: [
+    { label: '我的', rows: [['works', '我的作品', 'i-folder'], ['history', '历史成绩', 'i-history'], ['appeals', '申诉', 'i-appeal'], ['usage', '我的用量', 'i-chart']] }
+  ] },
+  task: { title: '工作', groups: [
+    { label: '项目', rows: [['l07', '实训 · L07 · 能力边界判断与模型选型', 'i-folder'], ['ws', '实训 · WorkSwarm 工具调用最小闭环', 'i-folder'], ['l01', '实训 · L01 · FDE 岗位认知', 'i-folder']] },
+    { label: '任务', rows: [] }
+  ] }
+};
+const PLACEHOLDER = {
+  'manage/usage': ['i-chart', '沿用「总览」的指标卡与图表规范，表格逐级钻取到学校、教学班、学生和单次调用。'],
+  'manage/schools': ['i-cap', '沿用「账号」的表格 + 新建抽屉。只有运营能看到。'],
+  'manage/classes': ['i-users', '与「教学 → 教学班」是同一组件，只是数据范围不同。'],
+  'manage/budget': ['i-wallet', '沿用「账号」的表格 + 抽屉；教师只读。'],
+  'manage/models': ['i-cpu', '沿用「账号」的表格 + 抽屉：启用模型、设置单价。演示视角下只读。'],
+  'manage/runs': ['i-activity', '沿用「账号」的表格：评阅任务队列、失败重试、服务检查。'],
+  'manage/system': ['i-server', '只显示服务连接状态。密钥只在服务端配置，页面不输入也不回显。'],
+  'teach/classes': ['i-users', '班级与学生名单，沿用「账号」的表格。'],
+  'teach/rubric': ['i-listcheck', '沿用「课程内容」的左树右编辑布局。'],
+  'teach/gradebook': ['i-table', '沿用「账号」的表格，支持导出。'],
+  'teach/appeals': ['i-appeal', '沿用「作品评阅」的左列表、右详情。'],
+  'teach/usage': ['i-chart', '沿用「总览」的指标卡与趋势图，范围是当前教学班。'],
+  'grades/history': ['i-history', '沿用「我的作品」的表格。'],
+  'grades/appeals': ['i-appeal', '沿用「我的作品」的表格 + 详情抽屉。'],
+  'grades/usage': ['i-chart', '沿用「总览」的指标卡与趋势图，只看本人用量。']
+};
+const CLASSES = ['智能体部署 · 2026 秋 1 班', '智能体部署 · 2026 秋 2 班', 'AI 漫剧周末班 · 社会班'];
+const PEOPLE = {
+  operator: { name: '郑雨', initial: '郑', login: 'zhengyu', school: '平台' },
+  teacher: { name: '陈静', initial: '陈', login: 'chenjing', school: '北辰职业技术学院' },
+  student: { name: '李明', initial: '李', login: 'liming01', school: '北辰职业技术学院' }
+};
+const REAL_SCHOOLS = ['北辰职业技术学院', '临江理工学院', '西岭信息工程学校'];
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const p = props || {};
+    const role = p.account === '社会学员' ? 'student' : (ROLE_BY_LABEL[p.startRole] || 'operator');
+    const cfg = ROLES[role];
+    this.timers = [];
+    this.state = {
+      screen: p.start === '已登录' ? 'app' : 'login',
+      role, nav: cfg.nav, sub: cfg.sub,
+      secCollapsed: false, scope: 'platform', menu: null,
+      phase: null, toRole: null, entering: null, leaving: null, chipSwap: false,
+      cls: p.account === '社会学员' ? CLASSES[2] : CLASSES[0]
+    };
+  }
+  componentDidMount() {
+    if (typeof window !== 'undefined' && window.innerWidth < 1280) this.setState({ secCollapsed: true });
+  }
+  componentWillUnmount() { this.timers.forEach(clearTimeout); }
+  narrow() { return typeof window !== 'undefined' && window.innerWidth < 1280; }
+  later(ms, fn) { this.timers.push(setTimeout(fn, ms)); }
+  go(nav) {
+    const s = this.state;
+    const firstSub = SEC[nav] && nav !== 'task' ? (nav === 'teach' ? 'review' : nav === 'grades' ? 'works' : 'overview') : null;
+    this.setState({ nav, sub: s.nav === nav ? s.sub : firstSub, menu: null });
+  }
+  switchRole(to) {
+    const s = this.state;
+    if (to === s.role || s.phase) { this.setState({ menu: null }); return; }
+    const cfg = ROLES[to];
+    this.setState({ menu: null, phase: 'out', toRole: to, leaving: ROLES[s.role].own });
+    this.later(200, () => this.setState({ phase: 'plate', role: to, nav: cfg.nav, sub: cfg.sub, entering: cfg.own, leaving: null, chipSwap: true, scope: 'platform' }));
+    this.later(1250, () => this.setState({ phase: 'leaving' }));
+    this.later(1450, () => this.setState({ phase: 'in' }));
+    this.later(1900, () => this.setState({ phase: null, entering: null, chipSwap: false, toRole: null }));
+  }
+  renderVals() {
+    const s = this.state;
+    const cfg = ROLES[s.role];
+    const isSocial = this.props.account === '社会学员';
+    const isDemo = !isSocial && this.props.account !== '普通账号';
+    const person = PEOPLE[s.role];
+    const acct = isDemo
+      ? { name: cfg.who, initial: cfg.initial, login: 'demo', placeLabel: '当前学校', school: '演示学校', tags: [{ label: '演示账号', cls: 'jw-tag info' }, { label: cfg.label + '视角', cls: 'jw-tag neutral' }] }
+      : isSocial
+        ? { name: '何静', initial: '何', login: 'hejing', placeLabel: '所在教学班', school: 'AI 漫剧周末班（社会班）', tags: [{ label: '学生', cls: 'jw-tag info' }, { label: '社会学员', cls: 'jw-tag neutral' }] }
+        : { name: person.name, initial: person.initial, login: person.login, placeLabel: '当前学校', school: person.school, tags: [{ label: cfg.label, cls: 'jw-tag info' }] };
+    const schoolLabel = isDemo ? '演示学校' : (s.school || REAL_SCHOOLS[0]);
+    const railItem = (it) => {
+      let cls = 'jw-rail-item';
+      if (it.key === s.nav) cls += ' is-active';
+      if (it.key === s.entering) cls += ' is-entering';
+      if (it.key === s.leaving) cls += ' is-leaving';
+      return { ...it, cls, go: () => this.go(it.key) };
+    };
+    const classes = isSocial ? [CLASSES[2]] : CLASSES;
+    const railTop = RAIL.filter((it) => !it.role || it.role === s.role || it.key === s.leaving).map(railItem);
+    const railBottom = RAIL_BOTTOM.map(railItem);
+    const secDef = SEC[s.nav];
+    const hasSec = !!secDef;
+    const groups = hasSec ? secDef.groups
+      .map((g) => ({ label: g.label, rows: g.rows
+        .filter((r) => !(s.nav === 'manage' && r[0] === 'schools' && s.scope !== 'platform'))
+        .map((r) => ({ label: r[1], icon: r[2], count: r[3] || '',
+          cls: 'jw-sec-row' + (r[0] === s.sub ? ' is-active' : ''),
+          go: () => this.setState({ sub: r[0], secCollapsed: this.narrow() ? true : s.secCollapsed }) })) }))
+      : [];
+    const sec = hasSec ? { title: secDef.title, groups } : { title: '', groups: [] };
+    let subLabel = '';
+    if (hasSec) secDef.groups.forEach((g) => g.rows.forEach((r) => { if (r[0] === s.sub) subLabel = r[1]; }));
+    const key = s.nav + '/' + s.sub;
+    const drawn = { 'manage/overview': 'overview', 'manage/accounts': 'accounts', 'teach/review': 'review', 'teach/course': 'course', 'grades/works': 'works' };
+    const show = { overview: false, accounts: false, review: false, course: false, works: false, project: false, task: false, placeholder: false, legacy: false };
+    if (drawn[key]) show[drawn[key]] = true;
+    else if (s.nav === 'project') show.project = true;
+    else if (s.nav === 'task') show.task = true;
+    else if (PLACEHOLDER[key]) show.placeholder = true;
+    else show.legacy = true;
+    const ph = PLACEHOLDER[key] || ['i-dashboard', ''];
+    const railLabel = (RAIL.concat(RAIL_BOTTOM).find((r) => r.key === s.nav) || {}).label;
+    const scopeText = s.nav === 'manage' ? (s.scope === 'platform' ? (isDemo ? '全平台（演示环境）' : '全平台') : s.scope === 'social' ? '社会班' : schoolLabel) : (s.nav === 'teach' || s.nav === 'grades') ? s.cls : '';
+    let viewCls = 'jw-view';
+    if (s.phase === 'out' || s.phase === 'plate') viewCls += ' is-out';
+    if (s.phase === 'in') viewCls += ' is-in';
+    const plateRole = ROLES[s.toRole || s.role];
+    const scopeOptions = s.nav === 'manage'
+      ? (isDemo ? ['演示学校'] : REAL_SCHOOLS).map((c) => ({ label: c, current: c === schoolLabel, pick: () => this.setState({ school: c, menu: null }) }))
+      : classes.map((c) => ({ label: c, current: c === s.cls, pick: () => this.setState({ cls: c, menu: null }) }));
+    return {
+      isLogin: s.screen === 'login', isApp: s.screen === 'app',
+      finishLogin: () => this.setState({ screen: 'app' }),
+      railTop, railBottom, roleCfg: cfg, isDemo, acct, schoolLabel,
+      avatarCls: 'jw-avatar' + (isDemo ? ' is-demo' : ''),
+      chipCls: 'jw-demo-chip' + (s.chipSwap ? ' is-swapping' : ''),
+      demoOpen: s.menu === 'demo', accountOpen: s.menu === 'account', scopeOpen: s.menu === 'scope',
+      toggleDemo: () => { if (isDemo) this.setState({ menu: s.menu === 'demo' ? null : 'demo' }); },
+      toggleAccount: () => this.setState({ menu: s.menu === 'account' ? null : 'account' }),
+      toggleScopeMenu: () => this.setState({ menu: s.menu === 'scope' ? null : 'scope' }),
+      logout: () => this.setState({ screen: 'login', menu: null }),
+      roleOptions: ['operator', 'teacher', 'student'].map((r) => ({ ...ROLES[r], current: r === s.role, pick: () => this.switchRole(r) })),
+      scopeOptions,
+      hasSec, sec, isTask: s.nav === 'task', isManage: s.nav === 'manage',
+      hasClassScope: s.nav === 'teach' || s.nav === 'grades',
+      className: s.cls,
+      secCls: 'jw-sec' + (s.secCollapsed ? ' is-collapsed' : ''),
+      showOverlay: hasSec && !s.secCollapsed,
+      showCrumb: hasSec && s.secCollapsed && s.nav !== 'task',
+      collapseSec: () => this.setState({ secCollapsed: true }),
+      expandSec: () => this.setState({ secCollapsed: false }),
+      segPlatformCls: s.scope === 'platform' ? 'is-active' : '',
+      segSchoolCls: s.scope === 'school' ? 'is-active' : '',
+      segSocialCls: s.scope === 'social' ? 'is-active' : '',
+      scopeIsSocial: s.scope === 'social', demoScopeNote: isDemo && s.scope === 'platform',
+      pickSocial: () => this.setState({ scope: 'social', sub: s.sub === 'schools' ? 'overview' : s.sub }),
+      scopeIsSchool: s.scope === 'school',
+      pickPlatform: () => this.setState({ scope: 'platform' }),
+      pickSchool: () => this.setState({ scope: 'school', sub: s.sub === 'schools' ? 'overview' : s.sub }),
+      ovVariant: s.scope,
+      subLabel, scopeText, railLabel, show,
+      placeholderIcon: ph[0], placeholderText: ph[1],
+      viewCls,
+      plate: s.phase === 'plate' || s.phase === 'leaving',
+      plateCls: 'jw-plate' + (s.phase === 'leaving' ? ' is-leaving' : ''),
+      plateRole
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>成绩 · 我的作品</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./jiuwen.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="position: relative; min-height: 100vh; font-family: var(--font-body); color: var(--color-text-primary); background: var(--color-surface-content)">
+<div class="jw-page">
+  <div class="jw-page-head">
+    <div>
+      <h2 class="jw-h2">我的作品</h2>
+      <p class="jw-sub">{{className}} · 已提交 {{rowCount}} 个实训</p>
+    </div>
+  </div>
+  <div class="jw-toolbar">
+    <div class="jw-toolbar-left">
+      <label class="jw-search"><i class="ic ic-14 i-search" aria-hidden="true"></i><input class="jw-input" placeholder="搜索实训" aria-label="搜索实训"></label>
+      <select class="jw-input" style="width: 120px" aria-label="状态"><option>全部状态</option><option>评阅中</option><option>已发布</option><option>申诉中</option></select>
+    </div>
+    <div class="jw-toolbar-right jw-meta">AI 初评提交后立即可见，正式成绩以教师发布为准</div>
+  </div>
+  <div class="jw-table-wrap">
+    <table class="jw-table" style="min-width: 720px">
+      <thead><tr><th>实训</th><th>提交时间</th><th class="r">成绩</th><th>来源</th><th>状态</th><th style="width: 80px">操作</th></tr></thead>
+      <tbody>
+        <sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+          <tr class="is-clickable" onClick="{{r.open}}">
+            <td><div style="font-weight: 500">{{r.title}}</div><div class="jw-meta">{{r.chapter}}</div></td>
+            <td class="num jw-muted">{{r.time}}</td>
+            <td class="r num" style="font-size: 16px; font-weight: 600">{{r.score}}</td>
+            <td><span class="{{r.srcCls}}">{{r.src}}</span></td>
+            <td><span class="{{r.statusCls}}">{{r.status}}</span></td>
+            <td><button class="jw-link">查看</button></td>
+          </tr>
+        </sc-for>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<sc-if value="{{open}}" hint-placeholder-val="{{ false }}">
+  <button class="jw-backdrop" onClick="{{close}}" aria-label="关闭"></button>
+  <aside class="jw-drawer wide" role="dialog" aria-label="作品详情">
+    <div class="jw-drawer-head"><h3 class="jw-drawer-title">{{w.title}}</h3><button class="jw-icon-btn" onClick="{{close}}" aria-label="关闭"><i class="ic i-x" aria-hidden="true"></i></button></div>
+    <div class="jw-drawer-body">
+      <div style="display: flex; align-items: flex-end; gap: 16px">
+        <div><div class="jw-meta">{{w.scoreLabel}}</div><div class="num" style="font-size: 40px; font-weight: 600; line-height: 48px">{{w.score}}<span style="font-size: 15px; font-weight: 400; color: var(--color-text-secondary)"> / 100</span></div></div>
+        <sc-if value="{{w.published}}" hint-placeholder-val="{{ true }}"><div class="jw-meta" style="padding-bottom: 8px">AI 初评 {{w.ai}} · 教师 张晓雯 {{w.pubTime}} 发布</div></sc-if>
+        <span class="{{w.statusCls}}" style="margin: 0 0 10px auto">{{w.status}}</span>
+      </div>
+      <sc-if value="{{w.aiOnly}}" hint-placeholder-val="{{ false }}">
+        <div class="jw-alert info"><i class="ic ic-14 i-info" aria-hidden="true"></i><span>这是 AI 初评，正式成绩以教师发布为准。教师发布后会通知你。</span></div>
+      </sc-if>
+      <sc-if value="{{w.oneShot}}" hint-placeholder-val="{{ false }}">
+        <div class="jw-alert warning"><i class="ic ic-14 i-warn" aria-hidden="true"></i><span>一次性完成：所有动手工作在一轮指令内完成，「指挥过程」最多 5 分。</span></div>
+      </sc-if>
+
+      <section>
+        <h4 style="margin: 0 0 10px; font-size: 14px; font-weight: 600">逐项得分</h4>
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <sc-for list="{{w.items}}" as="it" hint-placeholder-count="6">
+            <div>
+              <div style="display: flex; align-items: center; gap: 12px; font-size: 14px">
+                <span style="flex: 1">{{it.title}}</span>
+                <div class="jw-bar-track" style="width: 120px"><div class="jw-bar-fill" style="width: {{it.pct}}%"></div></div>
+                <span class="num" style="width: 52px; text-align: right"><b>{{it.score}}</b><span class="jw-muted"> / {{it.max}}</span></span>
+              </div>
+              <div class="jw-meta" style="margin-top: 4px; line-height: 1.6">{{it.reason}}</div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <sc-if value="{{w.published}}" hint-placeholder-val="{{ true }}">
+      <section>
+        <h4 style="margin: 0 0 8px; font-size: 14px; font-weight: 600">教师评语</h4>
+        <div class="jw-hint" style="font-size: 14px">{{w.comment}}</div>
+      </section>
+      </sc-if>
+
+      <section>
+        <h4 style="margin: 0 0 8px; font-size: 14px; font-weight: 600">提交的文件</h4>
+        <div class="row" style="gap: 6px"><sc-for list="{{w.files}}" as="f" hint-placeholder-count="5"><span class="jw-tag neutral" style="height: 24px; border-radius: 4px"><i class="ic ic-12 i-file" aria-hidden="true"></i><span class="mono">{{f}}</span></span></sc-for></div>
+      </section>
+
+      <sc-if value="{{w.appealing}}" hint-placeholder-val="{{ false }}">
+      <section class="jw-card" style="padding: 14px 16px">
+        <div class="row" style="justify-content: space-between"><b style="font-size: 14px">申诉处理中</b><span class="jw-meta">{{w.appealTime}} 提交</span></div>
+        <div style="margin-top: 6px; font-size: 13px; color: var(--color-text-tertiary)">申诉项：{{w.appealItem}}。教师会在 3 个工作日内回复，结果会通知你。</div>
+      </section>
+      </sc-if>
+
+      <sc-if value="{{appealForm}}" hint-placeholder-val="{{ false }}">
+      <section class="jw-card" style="padding: 16px; display: flex; flex-direction: column; gap: 14px">
+        <b style="font-size: 14px">发起申诉</b>
+        <div class="jw-field"><label class="jw-label" for="ap-item">对哪一项有异议<span class="req">*</span></label><select id="ap-item" class="jw-input"><sc-for list="{{w.items}}" as="it" hint-placeholder-count="6"><option>{{it.title}}（{{it.score}} / {{it.max}}）</option></sc-for></select></div>
+        <div class="jw-field"><label class="jw-label" for="ap-why">理由<span class="req">*</span></label><textarea id="ap-why" class="jw-textarea" rows="3" placeholder="写明你认为哪里评错了，并指出对应的文件、行或指令"></textarea><span class="jw-help">每份作品可以申诉一次</span></div>
+      </section>
+      </sc-if>
+    </div>
+    <div class="jw-drawer-foot" style="justify-content: space-between; align-items: center">
+      <span class="jw-meta">{{w.appealHint}}</span>
+      <div class="row">
+        <sc-if value="{{appealForm}}" hint-placeholder-val="{{ false }}"><button class="jw-btn secondary" onClick="{{cancelAppeal}}">取消</button><button class="jw-btn primary" onClick="{{submitAppeal}}">提交申诉</button></sc-if>
+        <sc-if value="{{showAppealBtn}}" hint-placeholder-val="{{ true }}"><button class="{{appealBtnCls}}" onClick="{{startAppeal}}"><i class="ic ic-14 i-appeal" aria-hidden="true"></i>发起申诉</button></sc-if>
+      </div>
+    </div>
+  </aside>
+</sc-if>
+<sc-if value="{{toast}}" hint-placeholder-val="{{ false }}"><div class="jw-toast" role="status"><i class="ic ic-14 i-circlecheck" aria-hidden="true"></i>{{toast}}</div></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"teamLabel":{"editor":null,"default":"智能体部署 · 2026 秋 1 班"},"$preview":{"width":1128,"height":900}}'>
+const WORKS = [
+  { id: 'ws', title: 'WorkSwarm 工具调用最小闭环', chapter: '第 1 章 工具调用基础', time: '11-02 14:32', ai: 77, teacher: null, status: '评阅中',
+    items: [['交付物完整', 15, 13, 'draft_ticket 缺少 required 字段。'], ['参数校验与错误处理', 15, 12, '未知工具名时程序抛异常退出。'], ['幂等与审计', 10, 8, '被拒绝的调用缺少拒绝原因。'], ['说明与证据', 10, 7, '用例没有覆盖未知工具名。'], ['指挥过程', 25, 19, '分 4 轮下达指令，约束写得具体。'], ['核查纠偏', 25, 18, '发现漏写拒绝原因，但没有要求重做。']] },
+  { id: 'l07', title: 'L07 · 能力边界判断与模型选型', chapter: '第 2 章 能力边界与选型', time: '10-30 20:10', ai: 80, teacher: 84, status: '已发布', pubTime: '10-31',
+    comment: '五维难度标注有依据，选型记录诚实写出了只测一个模型的局限。下次把人审环节的触发条件写得更具体。',
+    items: [['五维难度标注', 20, 17, '每一维都给了理由，「数据可得性」偏乐观。'], ['方案比较', 20, 17, '两种方案的成本对比清楚。'], ['分工与人审', 10, 8, '人审触发条件不够具体。'], ['选型记录', 10, 9, '写明了只测一个模型的局限。'], ['指挥过程', 20, 17, '分步下达指令，第 3 步追问了边界。'], ['核查纠偏', 20, 16, '核查回答具体，对上了交付物。']] },
+  { id: 'mcp', title: 'MCP 服务接入与权限边界', chapter: '第 1 章 工具调用基础', time: '10-27 16:45', ai: 70, teacher: 68, status: '申诉中', pubTime: '10-28', appealTime: '10-29 09:20', appealItem: '核查纠偏',
+    comment: '权限清单完整，但核查回答比较笼统。',
+    items: [['交付物完整', 15, 14, '文件齐全。'], ['权限最小化', 15, 11, '有一个工具申请了不必要的写权限。'], ['审计与回滚', 10, 7, '没有回滚说明。'], ['说明与证据', 10, 7, '缺少运行截图以外的证据。'], ['指挥过程', 25, 18, '拆解合理。'], ['核查纠偏', 25, 11, '核查回答较笼统。']] },
+  { id: 'l01', title: 'L01 · FDE 岗位认知', chapter: '第 1 章 工具调用基础', time: '10-20 10:05', ai: 88, teacher: 90, status: '已发布', pubTime: '10-21',
+    comment: '对岗位职责的理解准确，案例选得好。',
+    items: [['岗位职责', 30, 27, '准确。'], ['案例分析', 30, 28, '案例贴合。'], ['指挥过程', 20, 18, '分步清楚。'], ['核查纠偏', 20, 17, '有具体核查动作。']] }
+];
+const STATUS_CLS = { '评阅中': 'jw-tag info', '已发布': 'jw-tag success', '申诉中': 'jw-tag warning' };
+class Component extends DCLogic {
+  constructor(props) { super(props); this.timers = []; this.state = { open: null, appeal: false, appealed: {}, toast: '' }; }
+  componentWillUnmount() { this.timers.forEach(clearTimeout); }
+  renderVals() {
+    const s = this.state;
+    const statusOf = (w) => (s.appealed[w.id] ? '申诉中' : w.status);
+    const rows = WORKS.map((w) => ({
+      title: w.title, chapter: w.chapter, time: w.time,
+      score: w.teacher !== null ? w.teacher : w.ai,
+      src: w.teacher !== null ? '教师发布' : 'AI 初评', srcCls: w.teacher !== null ? 'jw-tag neutral' : 'jw-tag muted',
+      status: statusOf(w), statusCls: STATUS_CLS[statusOf(w)],
+      open: () => this.setState({ open: w.id, appeal: false })
+    }));
+    const w = WORKS.find((x) => x.id === s.open) || WORKS[0];
+    const st = statusOf(w);
+    const published = w.teacher !== null;
+    const canAppeal = published && st === '已发布';
+    return {
+      className: this.props.teamLabel || '智能体部署 · 2026 秋 1 班',
+      rows, rowCount: rows.length, open: !!s.open, close: () => this.setState({ open: null }),
+      w: {
+        title: w.title, score: published ? w.teacher : w.ai, ai: w.ai, pubTime: w.pubTime,
+        scoreLabel: published ? '成绩' : 'AI 初评', published, aiOnly: !published, oneShot: false,
+        status: st, statusCls: STATUS_CLS[st], comment: w.comment,
+        appealing: st === '申诉中', appealTime: w.appealTime || '刚刚', appealItem: w.appealItem || '核查纠偏',
+        items: w.items.map((it) => ({ title: it[0], max: it[1], score: it[2], pct: Math.round((it[2] / it[1]) * 100), reason: it[3] })),
+        files: w.id === 'ws' ? ['tools.schema.json', 'tool_runner.py', 'tool-tests.csv', 'tool-audit.jsonl', 'README.md'] : w.id === 'mcp' ? ['mcp-permissions.md', 'server.py', 'README.md'] : ['选型记录.md', '难度标注.csv', 'README.md'],
+        appealHint: !published ? '教师发布成绩后才能申诉' : st === '申诉中' ? '已申诉，等待教师回复' : '发布后 7 天内可以申诉 · 还剩 4 天'
+      },
+      appealForm: s.appeal,
+      showAppealBtn: !s.appeal && st !== '申诉中',
+      appealBtnCls: 'jw-btn secondary' + (canAppeal ? '' : ' is-disabled'),
+      startAppeal: () => { if (canAppeal) this.setState({ appeal: true }); },
+      cancelAppeal: () => this.setState({ appeal: false }),
+      submitAppeal: () => {
+        this.setState({ appeal: false, appealed: { ...s.appealed, [w.id]: true }, toast: '申诉已提交，教师会在 3 个工作日内回复' });
+        this.timers.push(setTimeout(() => this.setState({ toast: '' }), 2400));
+      },
+      toast: s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>教学 · 作品评阅</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./jiuwen.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="position: relative; display: flex; flex-direction: column; height: 100vh; min-height: 720px; font-family: var(--font-body); color: var(--color-text-primary); background: var(--color-surface-content)">
+  <div style="padding: 24px 32px 0; flex: none">
+    <div class="jw-page-head">
+      <div>
+        <h2 class="jw-h2">作品评阅</h2>
+        <p class="jw-sub">{{className}} · 实训「WorkSwarm 工具调用最小闭环」· 待评阅 {{pendingCount}} 份</p>
+      </div>
+      <select class="jw-input" style="width: 260px" aria-label="实训"><option>WorkSwarm 工具调用最小闭环</option><option>L07 · 能力边界判断与模型选型</option></select>
+    </div>
+    <div class="jw-tabs" style="margin-top: 20px" role="tablist">
+      <button class="{{tab1Cls}}" onClick="{{toTab1}}" role="tab">逐份评阅</button>
+      <button class="{{tab2Cls}}" onClick="{{toTab2}}" role="tab">批量复核<span class="badge">{{flaggedCount}} 份异常</span></button>
+    </div>
+  </div>
+
+  <sc-if value="{{isTab1}}" hint-placeholder-val="{{ true }}">
+  <div style="flex: 1; min-height: 0; display: flex">
+    <div style="width: 320px; flex: none; display: flex; flex-direction: column; border-right: 1px solid var(--color-border-default)">
+      <div class="row" style="padding: 12px 16px; flex-wrap: nowrap">
+        <label class="jw-search" style="flex: 1"><i class="ic ic-14 i-search" aria-hidden="true"></i><input class="jw-input" style="width: 100%" placeholder="搜索学生" aria-label="搜索学生"></label>
+        <select class="jw-input" style="width: 96px" aria-label="状态"><option>全部</option><option>待评阅</option><option>草稿</option><option>已发布</option><option>申诉中</option></select>
+      </div>
+      <div style="flex: 1; overflow-y: auto; padding: 0 8px 12px">
+        <sc-for list="{{subs}}" as="it" hint-placeholder-count="8">
+          <button class="{{it.cls}}" onClick="{{it.pick}}" style="{{it.style}}">
+            <span style="display: flex; align-items: center; gap: 8px">
+              <span style="font-weight: 500">{{it.name}}</span>
+              <span class="{{it.statusCls}}">{{it.status}}</span>
+              <span class="num" style="margin-left: auto; font-size: 15px; font-weight: 600">{{it.score}}</span>
+            </span>
+            <span style="display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 12px; color: var(--color-text-secondary)">
+              <span class="num">{{it.time}}</span><span>· AI 初评</span>
+              <sc-for list="{{it.flags}}" as="f" hint-placeholder-count="0"><span class="jw-tag warning" style="height: 16px; line-height: 16px; padding: 0 4px; font-size: 11px">{{f}}</span></sc-for>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+      <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 14px 24px; border-bottom: 1px solid var(--color-border-default); flex: none">
+        <span class="jw-avatar">{{cur.initial}}</span>
+        <div style="min-width: 0">
+          <div style="font-size: 16px; font-weight: 600">{{cur.name}}</div>
+          <div class="jw-meta">提交于 {{cur.time}} · 第 1 次提交</div>
+        </div>
+        <div style="margin-left: auto; display: flex; align-items: center; gap: 20px">
+          <div style="text-align: right"><div class="jw-meta">AI 初评</div><div class="num" style="font-size: 15px; color: var(--color-text-secondary)">{{aiTotal}}</div></div>
+          <div style="text-align: right"><div class="jw-meta">教师成绩</div><div class="num" style="font-size: 22px; font-weight: 600; line-height: 26px">{{teacherTotal}}<span style="font-size: 13px; font-weight: 400; color: var(--color-text-secondary)"> / 100</span></div></div>
+          <button class="jw-btn secondary" onClick="{{saveDraft}}">保存草稿</button>
+          <button class="jw-btn primary" onClick="{{askPublish}}">{{publishLabel}}</button>
+        </div>
+      </div>
+      <div style="flex: 1; overflow-y: auto; padding: 20px 24px 40px; display: flex; flex-direction: column; gap: 24px">
+        <sc-if value="{{d.oneShot}}" hint-placeholder-val="{{ false }}">
+          <div class="jw-alert warning"><i class="ic ic-14 i-warn" aria-hidden="true"></i><span><b>一次性完成</b>：所有动手工作都在一轮指令内完成，「指挥过程」按规则封顶 5 分。封顶由系统执行，与模型给分无关。</span></div>
+        </sc-if>
+
+        <section>
+          <h3 class="jw-section-title" style="font-size: 15px; margin-bottom: 10px">提交的文件</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px">
+            <sc-for list="{{files}}" as="f" hint-placeholder-count="5">
+              <button style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--color-border-default); border-radius: 8px; background: var(--color-surface-elevated); text-align: left; cursor: pointer">
+                <i class="ic {{f.icon}}" style="color: var(--color-text-secondary)" aria-hidden="true"></i>
+                <span style="flex: 1; min-width: 0"><span class="mono" style="display: block; font-size: 13px; color: var(--color-text-primary)">{{f.name}}</span><span class="jw-meta">{{f.size}}</span></span>
+                <i class="ic ic-14 i-eye" style="color: var(--color-text-secondary)" aria-hidden="true"></i>
+              </button>
+            </sc-for>
+          </div>
+        </section>
+
+        <section>
+          <div class="row" style="justify-content: space-between; margin-bottom: 10px">
+            <h3 class="jw-section-title" style="font-size: 15px">学员指令与步骤</h3>
+            <span class="jw-meta">{{d.turns}}</span>
+          </div>
+          <div class="jw-card" style="padding: 4px 16px">
+            <sc-for list="{{d.steps}}" as="st" hint-placeholder-count="5">
+              <div style="display: grid; grid-template-columns: 24px 1fr auto; gap: 4px 12px; padding: 12px 0; border-bottom: 1px solid var(--color-border-default)">
+                <span class="jw-step-num" style="margin-top: 1px">{{st.n}}</span>
+                <span style="font-weight: 500">{{st.title}}</span>
+                <span class="jw-meta num">{{st.time}}</span>
+                <span></span>
+                <div style="grid-column: 2 / 4; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.6">
+                  <sc-if value="{{st.instruction}}" hint-placeholder-val="{{ true }}"><div style="padding: 6px 10px; border-radius: 8px; background: var(--color-surface-page)"><span class="jw-muted">学员指令：</span>{{st.instruction}}</div></sc-if>
+                  <sc-if value="{{st.question}}" hint-placeholder-val="{{ false }}"><div><span class="jw-muted">核查问题：</span>{{st.question}}</div><div><span class="jw-muted">学员回答：</span>{{st.answer}}</div></sc-if>
+                  <sc-if value="{{st.empty}}" hint-placeholder-val="{{ false }}"><div class="jw-muted">这一步没有单独的指令</div></sc-if>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+
+        <section>
+          <div class="row" style="justify-content: space-between; margin-bottom: 10px">
+            <h3 class="jw-section-title" style="font-size: 15px">评分项</h3>
+            <span class="jw-meta">交付物 50 · 指挥过程 25 · 核查纠偏 25 · 改分只影响教师成绩</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <sc-for list="{{items}}" as="it" hint-placeholder-count="6">
+              <div class="jw-card" style="padding: 14px 16px">
+                <div style="display: flex; align-items: center; gap: 12px">
+                  <span style="font-weight: 600">{{it.title}}</span>
+                  <span class="jw-meta">满分 {{it.max}}</span>
+                  <sc-if value="{{it.capped}}" hint-placeholder-val="{{ false }}"><span class="jw-tag warning">一次性完成 · 封顶 5</span></sc-if>
+                  <span style="margin-left: auto" class="jw-meta">AI {{it.ai}}</span>
+                  <label class="row" style="gap: 6px; flex-wrap: nowrap"><span class="jw-meta">教师</span>
+                    <span style="display: inline-flex; align-items: center; border: 1px solid var(--color-border-input); border-radius: 8px; overflow: hidden">
+                      <button class="jw-icon-btn sm" onClick="{{it.dec}}" aria-label="减一分"><i class="ic ic-12 i-minus" aria-hidden="true"></i></button>
+                      <input class="num" value="{{it.score}}" onInput="{{it.onInput}}" aria-label="{{it.title}} 教师得分" style="width: 40px; height: 28px; border: 0; text-align: center; font-size: 14px; font-weight: 600; outline: none">
+                      <button class="jw-icon-btn sm" onClick="{{it.inc}}" aria-label="加一分"><i class="ic ic-12 i-plus" aria-hidden="true"></i></button>
+                    </span>
+                  </label>
+                  <span class="{{it.deltaCls}}" style="width: 48px">{{it.delta}}</span>
+                </div>
+                <p style="margin: 8px 0 0; font-size: 13px; line-height: 1.7; color: var(--color-text-tertiary)">{{it.reason}}</p>
+                <div class="row" style="gap: 6px; margin-top: 8px">
+                  <sc-for list="{{it.refs}}" as="r" hint-placeholder-count="1">
+                    <span class="{{r.cls}}" title="{{r.title}}"><i class="ic ic-12 {{r.icon}}" aria-hidden="true"></i>{{r.text}}</span>
+                  </sc-for>
+                </div>
+                <div style="display: flex; gap: 6px; margin-top: 8px; font-size: 13px; color: var(--color-text-primary)"><i class="ic ic-14 i-bulb" style="margin-top: 3px; color: var(--color-feedback-warning)" aria-hidden="true"></i><span>{{it.tip}}</span></div>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+
+        <section>
+          <h3 class="jw-section-title" style="font-size: 15px; margin-bottom: 10px">评语</h3>
+          <textarea class="jw-textarea" rows="3" placeholder="写给学生看的评语，发布后可见" aria-label="评语">拆解清楚、约束写得具体。下次把审计字段也写进指令，并在发现智能体漏写后要求它补上。</textarea>
+        </section>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{isTab2}}" hint-placeholder-val="{{ false }}">
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 16px 32px 40px">
+    <div class="jw-toolbar" style="margin-top: 0">
+      <div class="jw-toolbar-left">
+        <sc-for list="{{chips}}" as="c" hint-placeholder-count="5">
+          <button class="{{c.cls}}" onClick="{{c.pick}}">{{c.label}}<span class="num" style="margin-left: 6px; opacity: .7">{{c.n}}</span></button>
+        </sc-for>
+      </div>
+      <div class="jw-toolbar-right">
+        <sc-if value="{{batchSel}}" hint-placeholder-val="{{ false }}"><span style="font-size: 14px">已选 <b class="num">{{batchCount}}</b> 份</span></sc-if>
+        <button class="{{batchBtnCls}}" onClick="{{batchPublish}}"><i class="ic ic-14 i-send" aria-hidden="true"></i>发布所选成绩</button>
+      </div>
+    </div>
+    <div class="jw-hint" style="margin-bottom: 12px; font-size: 13px"><i class="ic ic-14 i-info" style="margin-top: 4px; color: var(--color-text-secondary)" aria-hidden="true"></i><span><b>分数偏离</b>：AI 初评与本班中位数相差 20 分以上。<b>引用未核实</b>：评分理由引用的位置在提交材料里找不到。未改分的作品按 AI 初评发布。</span></div>
+    <div class="jw-table-wrap">
+      <table class="jw-table" style="min-width: 760px">
+        <thead><tr><th class="w-check"><button class="{{bAllCls}}" onClick="{{bToggleAll}}" aria-label="全选"><sc-if value="{{bAllOn}}" hint-placeholder-val="{{ false }}"><i class="ic ic-12 i-check" aria-hidden="true"></i></sc-if></button></th><th>学生</th><th>提交时间</th><th class="r">AI 初评</th><th class="r">教师成绩</th><th>异常</th><th>状态</th><th>操作</th></tr></thead>
+        <tbody>
+          <sc-for list="{{batchRows}}" as="r" hint-placeholder-count="8">
+            <tr class="{{r.trCls}}">
+              <td><button class="{{r.checkCls}}" onClick="{{r.toggle}}" aria-label="选择 {{r.name}}"><sc-if value="{{r.on}}" hint-placeholder-val="{{ false }}"><i class="ic ic-12 i-check" aria-hidden="true"></i></sc-if></button></td>
+              <td style="font-weight: 500">{{r.name}}</td>
+              <td class="num jw-muted">{{r.time}}</td>
+              <td class="r num">{{r.score}}</td>
+              <td class="r num">{{r.teacher}}</td>
+              <td><div class="row" style="gap: 4px; flex-wrap: nowrap"><sc-for list="{{r.flags}}" as="f" hint-placeholder-count="0"><span class="jw-tag warning">{{f}}</span></sc-for><sc-if value="{{r.noFlag}}" hint-placeholder-val="{{ true }}"><span class="jw-muted">—</span></sc-if></div></td>
+              <td><span class="{{r.statusCls}}">{{r.status}}</span></td>
+              <td><button class="jw-link" onClick="{{r.open}}">评阅</button></td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{confirm}}" hint-placeholder-val="{{ false }}">
+  <div class="jw-dialog-wrap">
+    <button class="jw-backdrop" onClick="{{closeConfirm}}" aria-label="关闭"></button>
+    <div class="jw-dialog" role="dialog" aria-label="发布成绩">
+      <div class="jw-dialog-head"><h3 class="jw-dialog-title">{{confirmTitle}}</h3></div>
+      <div class="jw-dialog-body"><p style="margin: 0; color: var(--color-text-tertiary)">发布后学生能看到成绩、逐项得分和评语，并可以在 7 天内发起申诉。发布后仍可修改，修改会通知学生。</p></div>
+      <div class="jw-dialog-foot"><button class="jw-btn secondary" onClick="{{closeConfirm}}">取消</button><button class="jw-btn primary" onClick="{{doPublish}}">发布</button></div>
+    </div>
+  </div>
+  </sc-if>
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}"><div class="jw-toast" role="status"><i class="ic ic-14 i-circlecheck" aria-hidden="true"></i>{{toast}}</div></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"teamLabel":{"editor":null,"default":"智能体部署 · 2026 秋 1 班"},"$preview":{"width":1128,"height":1000}}'>
+const SUBS = [
+  ['liming', '李明', '11-02 14:32', 77, '待评阅', ['引用未核实']],
+  ['wanglei', '王磊', '11-02 15:10', 45, '待评阅', ['一次性完成']],
+  ['hejy', '何嘉怡', '11-02 16:05', 38, '待评阅', ['分数偏离']],
+  ['gaochen', '高晨', '11-01 19:12', 74, '待评阅', ['引用未核实']],
+  ['majun', '马俊', '11-01 20:44', 82, '草稿', []],
+  ['luojia', '罗佳', '11-01 21:30', 71, '待评阅', ['引用未核实']],
+  ['zhouting', '周婷', '11-01 18:30', 88, '已发布', []],
+  ['guoyu', '郭宇', '10-31 17:50', 80, '申诉中', []],
+  ['sunyue', '孙悦', '10-31 15:22', 72, '已发布', []]
+];
+const STATUS_CLS = { '待评阅': 'jw-tag info', '草稿': 'jw-tag neutral', '已发布': 'jw-tag success', '申诉中': 'jw-tag danger' };
+const ITEMS_A = [
+  ['交付物完整', 15, 13, '五个文件齐全；tools.schema.json 里 draft_ticket 缺少 required 字段。', [['tools.schema.json · draft_ticket', true]], '给 draft_ticket 补上 required，并约束 priority 的取值。'],
+  ['参数校验与错误处理', 15, 12, '执行前按 Schema 校验，非法参数被拒绝且没有执行；传入未知工具名时程序抛异常退出。', [['tool_runner.py · validate_args()', true], ['tool-tests.csv 第 3、4 行', true]], '未知工具名应返回明确错误，而不是抛异常。'],
+  ['幂等与审计', 10, 8, '重复 request_id 返回首次结果；被拒绝的调用写进了审计，但缺少拒绝原因。', [['tool-audit.jsonl 第 5 行', true]], '审计记录里写明拒绝原因。'],
+  ['说明与证据', 10, 7, 'README 写了运行方法；声称“全部用例通过”，tool-tests.csv 只有 5 条，没有覆盖未知工具名。', [['README.md 第 12 行', false]], '把每项要求对应到具体文件或用例，并写明只用了模拟数据。'],
+  ['指挥过程', 25, 19, '分 4 轮下达指令；第 2 轮写明了数量不能为负、订单号格式；第 4 轮没有说审计要记拒绝原因。', [['学员指令 第 2 轮', true]], '下指令时把审计字段也说清楚。'],
+  ['核查纠偏', 25, 18, '核查回答具体（传负数后查看审计记录）；发现智能体漏写拒绝原因，但没有要求重做。', [['第 3 步核查回答', true], ['第 5 步核查回答', true]], '发现问题后让智能体改掉，再跑一遍用例。']
+];
+const ITEMS_B = [
+  ['交付物完整', 15, 12, '五个文件齐全，Schema 完整；tool-tests.csv 只有 3 条用例。', [['tool-tests.csv', true]], '补足至少 5 个用例，含非法参数和重复 request_id。'],
+  ['参数校验与错误处理', 15, 10, '执行前有校验；只有 1 个非法参数用例。', [['tool_runner.py · run()', true]], '再加一个类型错误或越界的用例。'],
+  ['幂等与审计', 10, 6, '有幂等处理；被拒绝的调用没有写入审计。', [['tool-audit.jsonl', true]], '被拒绝的调用也要写审计。'],
+  ['说明与证据', 10, 6, 'README 只有运行命令，没有把要求对应到文件。', [['README.md', true]], '逐条写明每项要求在哪个文件实现。'],
+  ['指挥过程', 25, 5, '只有一条指令“按 LAB.md 完成所有要求”，没有拆解和约束。模型给 14 分，系统判定一次性完成，本项最多 5 分。', [['学员指令 第 1 轮', true]], '按指引分步下指令，每步写清约束。', true],
+  ['核查纠偏', 25, 6, '两道核查问题都回答“检查过了”，没有具体动作。', [['第 3 步核查回答', true]], '写明你做了什么、看到了什么。']
+];
+const STEPS_A = [
+  ['读懂任务，定好边界', '14:02', '先别写代码。列出三个工具各自做什么，以及哪些系统不能连接。'],
+  ['定义工具的参数约束', '14:09', '为 get_order、calc_amount、draft_ticket 写 JSON Schema：quantity 不能为负，order_id 是 ORD- 加 8 位数字。'],
+  ['让执行器拦住非法调用', '14:17', '执行前按 Schema 校验，失败时返回是哪个字段的问题，不要执行工具。', '你用什么方法确认非法调用真的没有被执行？', '传了 quantity=-1，看 tool-audit.jsonl 里是拒绝记录，也没有生成工单。'],
+  ['处理重复调用并留下审计', '14:23', '同一个 request_id 只执行一次，第二次直接返回第一次的结果。'],
+  ['验证结果，准备提交', '14:31', '把 5 个用例跑一遍，结果写进 tool-tests.csv。', '智能体有没有哪里做错了或说得不准？你是怎么发现的？', '审计里拒绝的那条没写原因，对照文件发现的，没让它改。']
+];
+const STEPS_B = [
+  ['读懂任务，定好边界', '15:02', '按 LAB.md 完成所有要求。'],
+  ['定义工具的参数约束', '—', ''],
+  ['让执行器拦住非法调用', '—', '', '你用什么方法确认非法调用真的没有被执行？', '检查过了'],
+  ['处理重复调用并留下审计', '—', ''],
+  ['验证结果，准备提交', '15:09', '', '智能体有没有哪里做错了或说得不准？你是怎么发现的？', '没问题']
+];
+const FILES = [['tools.schema.json', '2.1 KB', 'i-file'], ['tool_runner.py', '6.4 KB', 'i-file'], ['tool-tests.csv', '0.8 KB', 'i-sheet'], ['tool-audit.jsonl', '1.3 KB', 'i-file'], ['README.md', '1.1 KB', 'i-file']];
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.timers = [];
+    this.state = { tab: 1, cur: 'liming', scores: {}, status: {}, confirm: null, toast: '', chip: 'all', bsel: {} };
+  }
+  componentWillUnmount() { this.timers.forEach(clearTimeout); }
+  flash(msg) { this.setState({ toast: msg }); this.timers.push(setTimeout(() => this.setState({ toast: '' }), 2200)); }
+  itemsFor(id) {
+    if (id === 'wanglei') return ITEMS_B;
+    const sub = SUBS.find((x) => x[0] === id);
+    if (id === 'liming') return ITEMS_A;
+    const f = sub[3] / 77; let acc = 0;
+    return ITEMS_A.map((it, i) => {
+      let v = i === ITEMS_A.length - 1 ? sub[3] - acc : Math.min(it[1], Math.round(it[2] * f));
+      v = Math.max(0, Math.min(it[1], v)); acc += v;
+      return [it[0], it[1], v, it[3], i === 3 && sub[5].indexOf('引用未核实') >= 0 ? it[4] : it[4].map((r) => [r[0], true]), it[5]];
+    });
+  }
+  renderVals() {
+    const s = this.state;
+    const statusOf = (x) => s.status[x[0]] || x[4];
+    const sub = SUBS.find((x) => x[0] === s.cur);
+    const items = this.itemsFor(s.cur);
+    const sc = s.scores[s.cur] || {};
+    const setScore = (i, v, max) => { const n = Math.max(0, Math.min(max, isNaN(v) ? 0 : v)); this.setState({ scores: { ...s.scores, [s.cur]: { ...sc, [i]: n } } }); };
+    let tTotal = 0, aTotal = 0;
+    const itemVals = items.map((it, i) => {
+      const score = sc[i] !== undefined ? sc[i] : it[2];
+      tTotal += score; aTotal += it[2];
+      const d = score - it[2];
+      return {
+        title: it[0], max: it[1], ai: it[2], score, reason: it[3], tip: it[5], capped: !!it[6],
+        delta: d === 0 ? '' : (d > 0 ? '+' : '') + d, deltaCls: d > 0 ? 'jw-tag success' : d < 0 ? 'jw-tag danger' : '',
+        inc: () => setScore(i, score + 1, it[1]), dec: () => setScore(i, score - 1, it[1]),
+        onInput: (e) => setScore(i, parseInt(e.target.value, 10), it[1]),
+        refs: it[4].map((r) => r[1]
+          ? { text: r[0], icon: 'i-link', title: '已在提交材料中找到', cls: 'jw-tag neutral' }
+          : { text: r[0] + ' · 引用未核实', icon: 'i-warn', title: '提交材料里找不到这个位置：README.md 只有 9 行', cls: 'jw-tag warning' })
+      };
+    });
+    const isB = s.cur === 'wanglei';
+    const steps = (isB ? STEPS_B : STEPS_A).map((st, i) => ({ n: i + 1, title: st[0], time: st[1], instruction: st[2] || '', question: st[3] || '', answer: st[4] || '', empty: !st[2] && !st[3] }));
+    const subs = SUBS.map((x) => {
+      const on = x[0] === s.cur;
+      return {
+        name: x[1], time: x[2], score: x[3], status: statusOf(x), statusCls: STATUS_CLS[statusOf(x)], flags: x[5],
+        cls: 'jw-sec-row' + (on ? ' is-active' : ''),
+        style: 'display: block; height: auto; padding: 10px 12px; margin-top: 2px; font-size: 14px',
+        pick: () => this.setState({ cur: x[0] })
+      };
+    });
+    const flagged = SUBS.filter((x) => x[5].length);
+    const chipDefs = [['all', '全部', SUBS.length], ['分数偏离', '分数偏离', SUBS.filter((x) => x[5].indexOf('分数偏离') >= 0).length], ['引用未核实', '引用未核实', SUBS.filter((x) => x[5].indexOf('引用未核实') >= 0).length], ['一次性完成', '一次性完成', SUBS.filter((x) => x[5].indexOf('一次性完成') >= 0).length], ['pending', '待评阅', SUBS.filter((x) => statusOf(x) === '待评阅').length]];
+    const filt = SUBS.filter((x) => s.chip === 'all' || (s.chip === 'pending' ? statusOf(x) === '待评阅' : x[5].indexOf(s.chip) >= 0));
+    const bCount = Object.keys(s.bsel).filter((k) => s.bsel[k]).length;
+    const bAllOn = filt.length > 0 && filt.every((x) => s.bsel[x[0]]);
+    const totalFor = (x) => { const m = s.scores[x[0]]; if (!m) return '—'; return this.itemsFor(x[0]).reduce((a, it, i) => a + (m[i] !== undefined ? m[i] : it[2]), 0); };
+    return {
+      className: this.props.teamLabel || '智能体部署 · 2026 秋 1 班',
+      pendingCount: SUBS.filter((x) => statusOf(x) === '待评阅').length, flaggedCount: flagged.length,
+      isTab1: s.tab === 1, isTab2: s.tab === 2,
+      tab1Cls: s.tab === 1 ? 'is-active' : '', tab2Cls: s.tab === 2 ? 'is-active' : '',
+      toTab1: () => this.setState({ tab: 1 }), toTab2: () => this.setState({ tab: 2 }),
+      subs, cur: { name: sub[1], time: sub[2], initial: sub[1].slice(-1) },
+      files: FILES.map((f) => ({ name: f[0], size: f[1], icon: f[2] })),
+      d: { oneShot: isB, steps, turns: isB ? '共 1 轮指令 · 用时 7 分钟' : '共 6 轮指令 · 用时 29 分钟' },
+      items: itemVals, aiTotal: aTotal, teacherTotal: tTotal,
+      publishLabel: statusOf(sub) === '已发布' ? '更新成绩' : '发布成绩',
+      saveDraft: () => { this.setState({ status: { ...s.status, [s.cur]: '草稿' } }); this.flash('草稿已保存，学生暂时看不到'); },
+      askPublish: () => this.setState({ confirm: 'one' }),
+      confirm: !!s.confirm, confirmTitle: s.confirm === 'batch' ? '发布 ' + bCount + ' 份成绩？' : '发布' + sub[1] + '的成绩？',
+      closeConfirm: () => this.setState({ confirm: null }),
+      doPublish: () => {
+        const st = { ...s.status };
+        if (s.confirm === 'batch') Object.keys(s.bsel).forEach((k) => { if (s.bsel[k]) st[k] = '已发布'; }); else st[s.cur] = '已发布';
+        this.setState({ status: st, confirm: null, bsel: s.confirm === 'batch' ? {} : s.bsel });
+        this.flash(s.confirm === 'batch' ? '已发布 ' + bCount + ' 份成绩' : '成绩已发布，学生已收到通知');
+      },
+      chips: chipDefs.map((c) => ({ label: c[1], n: c[2], cls: 'jw-btn ' + (s.chip === c[0] ? 'secondary' : 'ghost') + ' pill', pick: () => this.setState({ chip: c[0] }) })),
+      batchSel: bCount > 0, batchCount: bCount,
+      batchBtnCls: 'jw-btn primary' + (bCount ? '' : ' is-disabled'),
+      batchPublish: () => { if (bCount) this.setState({ confirm: 'batch' }); },
+      bAllOn, bAllCls: 'jw-check' + (bAllOn ? ' is-on' : ''),
+      bToggleAll: () => { const n = {}; if (!bAllOn) filt.forEach((x) => { n[x[0]] = true; }); this.setState({ bsel: n }); },
+      batchRows: filt.map((x) => {
+        const on = !!s.bsel[x[0]];
+        return {
+          name: x[1], time: x[2], score: x[3], teacher: totalFor(x), flags: x[5], noFlag: x[5].length === 0,
+          status: statusOf(x), statusCls: STATUS_CLS[statusOf(x)], on, trCls: on ? 'is-selected' : '',
+          checkCls: 'jw-check' + (on ? ' is-on' : ''),
+          toggle: () => this.setState({ bsel: { ...s.bsel, [x[0]]: !on } }),
+          open: () => this.setState({ tab: 1, cur: x[0] })
+        };
+      }),
+      toast: s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

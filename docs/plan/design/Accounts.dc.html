@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>管理 · 账号</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./jiuwen.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="position: relative; min-height: 100vh; font-family: var(--font-body); color: var(--color-text-primary); background: var(--color-surface-content)">
+<div class="jw-page">
+  <div class="jw-page-head">
+    <div>
+      <h2 class="jw-h2">账号</h2>
+      <p class="jw-sub">{{scopeLabel}} · 共 {{total}} 个账号</p>
+    </div>
+    <div class="row">
+      <button class="jw-btn secondary" onClick="{{openImport}}"><i class="ic ic-14 i-upload" aria-hidden="true"></i>批量导入</button>
+      <button class="jw-btn primary" onClick="{{openDrawer}}"><i class="ic ic-14 i-plus" aria-hidden="true"></i>新建账号</button>
+    </div>
+  </div>
+
+  <div class="jw-toolbar">
+    <sc-if value="{{noSelection}}" hint-placeholder-val="{{ true }}">
+    <div class="jw-toolbar-left">
+      <label class="jw-search"><i class="ic ic-14 i-search" aria-hidden="true"></i><input class="jw-input" placeholder="搜索姓名或登录名" value="{{q}}" onInput="{{onQ}}" aria-label="搜索账号"></label>
+      <select class="jw-input" style="width: 120px" aria-label="角色" onChange="{{onRole}}">
+        <option value="">全部角色</option><option value="学生">学生</option><option value="教师">教师</option><option value="学校管理员">学校管理员</option><option value="运营">运营</option>
+      </select>
+      <sc-if value="{{isPlatform}}" hint-placeholder-val="{{ true }}">
+      <select class="jw-input" style="width: 188px" aria-label="学校" onChange="{{onSchool}}"><option value="">全部学校</option><option value="北辰职业技术学院">北辰职业技术学院</option><option value="临江理工学院">临江理工学院</option><option value="—">无学校（社会学员）</option></select>
+      </sc-if>
+      <select class="jw-input" style="width: 112px" aria-label="状态" onChange="{{onStatus}}">
+        <option value="">全部状态</option><option value="正常">正常</option><option value="待改密">待改密</option><option value="已停用">已停用</option>
+      </select>
+    </div>
+    <div class="jw-toolbar-right jw-meta">首次登录强制改密</div>
+    </sc-if>
+    <sc-if value="{{hasSelection}}" hint-placeholder-val="{{ false }}">
+    <div class="jw-toolbar-left" style="height: 32px">
+      <span style="font-size: 14px">已选 <b class="num">{{selCount}}</b> 个账号</span>
+      <button class="jw-btn secondary" onClick="{{bulkReset}}"><i class="ic ic-14 i-reset" aria-hidden="true"></i>重置密码</button>
+      <button class="jw-btn danger" onClick="{{bulkDisable}}">停用</button>
+      <button class="jw-link muted" onClick="{{clearSel}}">取消选择</button>
+    </div>
+    </sc-if>
+  </div>
+
+  <div class="jw-table-wrap">
+    <table class="jw-table" style="min-width: 860px">
+      <thead><tr>
+        <th class="w-check"><button class="{{allCls}}" onClick="{{toggleAll}}" aria-label="全选"><sc-if value="{{allOn}}" hint-placeholder-val="{{ false }}"><i class="ic ic-12 i-check" aria-hidden="true"></i></sc-if></button></th>
+        <th>姓名</th><th>登录名</th><th>角色</th><th>学校</th><th>状态</th><th>最近登录</th><th style="width: 180px">操作</th>
+      </tr></thead>
+      <tbody>
+        <sc-for list="{{rows}}" as="r" hint-placeholder-count="8">
+          <tr class="{{r.trCls}}">
+            <td><button class="{{r.checkCls}}" onClick="{{r.toggle}}" aria-label="选择 {{r.name}}"><sc-if value="{{r.on}}" hint-placeholder-val="{{ false }}"><i class="ic ic-12 i-check" aria-hidden="true"></i></sc-if></button></td>
+            <td style="font-weight: 500">{{r.name}}</td>
+            <td class="mono" style="font-size: 13px; color: var(--color-text-tertiary)">{{r.login}}</td>
+            <td><div class="row" style="gap: 4px; flex-wrap: nowrap"><sc-for list="{{r.roles}}" as="ro" hint-placeholder-count="1"><span class="{{ro.cls}}">{{ro.label}}</span></sc-for></div></td>
+            <td style="color: var(--color-text-tertiary)"><span>{{r.school}}</span><sc-if value="{{r.socialClass}}" hint-placeholder-val="{{ false }}"><div class="jw-meta" style="margin-top: 2px">社会班：{{r.socialClass}}</div></sc-if></td>
+            <td><span class="{{r.statusCls}}">{{r.status}}</span></td>
+            <td class="num" style="color: var(--color-text-secondary)">{{r.last}}</td>
+            <td><div class="actions"><button class="jw-link">编辑</button><button class="jw-link" onClick="{{r.reset}}">重置密码</button><button class="{{r.toggleCls}}" onClick="{{r.disable}}">{{r.toggleLabel}}</button></div></td>
+          </tr>
+        </sc-for>
+      </tbody>
+    </table>
+    <sc-if value="{{noRows}}" hint-placeholder-val="{{ false }}">
+      <div class="jw-state" style="padding: 40px 24px">
+        <div class="jw-state-icon"><i class="ic ic-20 i-search" aria-hidden="true"></i></div>
+        <div class="jw-state-title">没有符合条件的账号</div>
+        <div class="jw-state-actions"><button class="jw-btn secondary" onClick="{{clearFilter}}">清除筛选</button></div>
+      </div>
+    </sc-if>
+  </div>
+  <div class="jw-pager">
+    <span>第 1–{{shown}} 条，共 {{total}} 条</span>
+    <div class="jw-pager-btns"><button aria-label="上一页"><i class="ic ic-12 i-left" aria-hidden="true"></i></button><button class="is-active">1</button><button>2</button><button>3</button><span style="padding: 0 4px">…</span><button>{{lastPage}}</button><button aria-label="下一页"><i class="ic ic-12 i-right" aria-hidden="true"></i></button></div>
+  </div>
+</div>
+
+<sc-if value="{{drawer}}" hint-placeholder-val="{{ false }}">
+  <button class="jw-backdrop" onClick="{{closeDrawer}}" aria-label="关闭"></button>
+  <aside class="jw-drawer" role="dialog" aria-label="新建账号">
+    <div class="jw-drawer-head"><h3 class="jw-drawer-title">新建账号</h3><button class="jw-icon-btn" onClick="{{closeDrawer}}" aria-label="关闭"><i class="ic i-x" aria-hidden="true"></i></button></div>
+    <div class="jw-drawer-body">
+      <div class="jw-field"><label class="jw-label" for="f-name">姓名<span class="req">*</span></label><input id="f-name" class="jw-input" placeholder="例如：李明"></div>
+      <div class="jw-field"><label class="jw-label" for="f-login">登录名<span class="req">*</span></label><input id="f-login" class="jw-input" placeholder="字母、数字或下划线"><span class="jw-help">创建后不能修改</span></div>
+      <div class="jw-field"><label class="jw-label" for="f-school">学校<span class="req">*</span></label>
+        <sc-if value="{{isPlatform}}" hint-placeholder-val="{{ true }}"><select id="f-school" class="jw-input" onChange="{{onNewSchool}}"><option value="北辰职业技术学院">北辰职业技术学院</option><option value="临江理工学院">临江理工学院</option><option value="none">不属于学校（社会学员）</option></select></sc-if>
+        <sc-if value="{{newSocial}}" hint-placeholder-val="{{ false }}"><select class="jw-input" aria-label="社会班" style="margin-top: 8px"><option>AI 漫剧周末班 · 王宁</option><option>FDE 冲刺营 · 陈静</option></select><span class="jw-help">社会学员必须属于一个社会班；开班老师也可以在「教学 → 教学班」里批量开号</span></sc-if>
+        <sc-if value="{{isSchool}}" hint-placeholder-val="{{ false }}"><div class="jw-input" style="display: flex; align-items: center; background: var(--color-surface-page); color: var(--color-text-secondary)">{{schoolName}}（本校）</div></sc-if>
+      </div>
+      <fieldset class="jw-field" style="border: 0; margin: 0; padding: 0">
+        <legend class="jw-label" style="margin-bottom: 8px">角色<span class="req">*</span></legend>
+        <div class="row" style="gap: 20px">
+          <sc-for list="{{roleChecks}}" as="c" hint-placeholder-count="3">
+            <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer"><button type="button" class="{{c.cls}}" onClick="{{c.toggle}}" aria-pressed="{{c.on}}" aria-label="{{c.label}}"><sc-if value="{{c.on}}" hint-placeholder-val="{{ false }}"><i class="ic ic-12 i-check" aria-hidden="true"></i></sc-if></button>{{c.label}}</label>
+          </sc-for>
+        </div>
+        <span class="jw-help" style="margin-top: 6px">可多选，对应的侧栏入口会同时出现</span>
+      </fieldset>
+      <div class="jw-field">
+        <span class="jw-label">初始密码</span>
+        <div class="jw-seg" style="width: 220px"><button class="is-active">自动生成</button><button>手动设置</button></div>
+        <span class="jw-help">创建后只显示一次；首次登录必须修改</span>
+      </div>
+    </div>
+    <div class="jw-drawer-foot"><button class="jw-btn secondary" onClick="{{closeDrawer}}">取消</button><button class="jw-btn primary" onClick="{{create}}">创建账号</button></div>
+  </aside>
+</sc-if>
+
+<sc-if value="{{dialog}}" hint-placeholder-val="{{ false }}">
+<div class="jw-dialog-wrap">
+  <button class="jw-backdrop" onClick="{{closeDialog}}" aria-label="关闭"></button>
+
+  <sc-if value="{{dlg.created}}" hint-placeholder-val="{{ false }}">
+  <div class="jw-dialog" role="dialog" aria-label="账号已创建">
+    <div class="jw-dialog-head"><h3 class="jw-dialog-title">{{tempTitle}}</h3></div>
+    <div class="jw-dialog-body">
+      <div style="display: grid; grid-template-columns: 72px 1fr; gap: 8px 12px; font-size: 14px">
+        <span class="jw-muted">登录名</span><span class="mono" style="font-size: 14px">{{tempLogin}}</span>
+        <span class="jw-muted">临时密码</span>
+        <span style="display: flex; align-items: center; gap: 8px"><span class="mono" style="font-size: 16px; font-weight: 600; letter-spacing: .04em">Kp7-mq4R-x92w</span><button class="jw-btn ghost" style="height: 28px; padding: 0 8px"><i class="ic ic-14 i-copy" aria-hidden="true"></i>复制</button></span>
+      </div>
+      <div class="jw-alert warning"><i class="ic ic-14 i-warn" aria-hidden="true"></i><span>临时密码只显示这一次，关闭后无法再查看。对方首次登录必须修改密码。</span></div>
+    </div>
+    <div class="jw-dialog-foot"><button class="jw-btn primary" onClick="{{closeDialog}}">我已记下</button></div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{dlg.reset}}" hint-placeholder-val="{{ false }}">
+  <div class="jw-dialog" role="dialog" aria-label="重置密码">
+    <div class="jw-dialog-head"><h3 class="jw-dialog-title">重置 {{target}} 的密码？</h3><button class="jw-icon-btn" onClick="{{closeDialog}}" aria-label="关闭"><i class="ic i-x" aria-hidden="true"></i></button></div>
+    <div class="jw-dialog-body">
+      <p style="margin: 0; color: var(--color-text-tertiary)">旧密码立即失效。会生成一个临时密码，对方下次登录时必须修改。</p>
+      <div class="jw-field"><label class="jw-label" for="re-pwd">输入你的密码确认</label><input id="re-pwd" class="jw-input" type="password" placeholder="你的登录密码"><span class="jw-help">重置密码、停用账号属于高风险操作，需要再次确认身份</span></div>
+    </div>
+    <div class="jw-dialog-foot"><button class="jw-btn secondary" onClick="{{closeDialog}}">取消</button><button class="jw-btn danger-solid" onClick="{{confirmReset}}">重置密码</button></div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{dlg.disable}}" hint-placeholder-val="{{ false }}">
+  <div class="jw-dialog" role="dialog" aria-label="停用账号">
+    <div class="jw-dialog-head"><h3 class="jw-dialog-title">停用 {{target}}？</h3><button class="jw-icon-btn" onClick="{{closeDialog}}" aria-label="关闭"><i class="ic i-x" aria-hidden="true"></i></button></div>
+    <div class="jw-dialog-body">
+      <p style="margin: 0; color: var(--color-text-tertiary)">停用后不能登录，正在进行的实训环境会被回收。作品和成绩保留，随时可以恢复。</p>
+      <div class="jw-field"><label class="jw-label" for="di-pwd">输入你的密码确认</label><input id="di-pwd" class="jw-input" type="password" placeholder="你的登录密码"></div>
+    </div>
+    <div class="jw-dialog-foot"><button class="jw-btn secondary" onClick="{{closeDialog}}">取消</button><button class="jw-btn danger-solid" onClick="{{confirmDisable}}">停用</button></div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{dlg.import}}" hint-placeholder-val="{{ false }}">
+  <div class="jw-dialog wide" role="dialog" aria-label="批量导入账号" style="height: min(640px, 100%)">
+    <div class="jw-dialog-head"><h3 class="jw-dialog-title">批量导入账号</h3><button class="jw-icon-btn" onClick="{{closeDialog}}" aria-label="关闭"><i class="ic i-x" aria-hidden="true"></i></button></div>
+    <div style="padding: 16px 22px 0">
+      <div class="jw-steps">
+        <sc-for list="{{steps}}" as="st" hint-placeholder-count="4">
+          <span class="{{st.cls}}"><span class="jw-step-num">{{st.n}}</span>{{st.label}}</span>
+          <sc-if value="{{st.line}}" hint-placeholder-val="{{ true }}"><span class="jw-step-line"></span></sc-if>
+        </sc-for>
+      </div>
+    </div>
+    <div class="jw-dialog-body" style="flex: 1; min-height: 0">
+
+      <sc-if value="{{imp.s1}}" hint-placeholder-val="{{ true }}">
+        <button style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; padding: 36px 16px; border: 1px dashed var(--color-border-strong); border-radius: 12px; background: var(--color-surface-page); cursor: pointer" onClick="{{pickFile}}">
+          <i class="ic ic-24 i-upload" style="color: var(--color-text-secondary)" aria-hidden="true"></i>
+          <span style="font-size: 14px">把表格拖到这里，或 <span style="color: var(--color-text-link)">选择文件</span></span>
+          <span class="jw-meta">支持 .xlsx、.csv，一次最多 2,000 行</span>
+        </button>
+        <sc-if value="{{fileChosen}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--color-border-default); border-radius: 8px">
+            <i class="ic i-sheet" style="color: var(--color-feedback-success)" aria-hidden="true"></i>
+            <span style="flex: 1">北辰-2026秋-新生.xlsx</span><span class="jw-meta">48 行 · 22 KB</span>
+          </div>
+        </sc-if>
+        <div class="jw-hint"><i class="ic ic-14 i-info" style="margin-top: 4px; color: var(--color-text-secondary)" aria-hidden="true"></i><span style="font-size: 13px">表格列：姓名、登录名、角色（学生 / 教师 / 学校管理员）、教学班（可选）。 <button class="jw-link" style="font-size: 13px">下载模板</button></span></div>
+      </sc-if>
+
+      <sc-if value="{{imp.s2}}" hint-placeholder-val="{{ false }}">
+        <div class="row" style="justify-content: space-between">
+          <div class="row"><span class="jw-tag success">可导入 45</span><span class="jw-tag danger">有问题 3</span><span class="jw-meta">共 48 行</span></div>
+          <label class="row jw-meta" style="cursor: pointer"><button class="{{onlyErrCls}}" onClick="{{toggleOnlyErr}}" aria-label="只看有问题的行"></button>只看有问题的行</label>
+        </div>
+        <div class="jw-table-wrap">
+          <table class="jw-table">
+            <thead><tr><th style="width: 56px">行</th><th>姓名</th><th>登录名</th><th>角色</th><th>教学班</th><th>校验结果</th></tr></thead>
+            <tbody>
+              <sc-for list="{{preview}}" as="p" hint-placeholder-count="6">
+                <tr class="{{p.cls}}"><td class="num jw-muted">{{p.n}}</td><td>{{p.name}}</td><td class="mono">{{p.login}}</td><td>{{p.role}}</td><td style="color: var(--color-text-tertiary)">{{p.cls2}}</td><td><span class="{{p.tagCls}}">{{p.result}}</span></td></tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+        <div class="jw-meta">有问题的 3 行不会导入。改好后可以只上传这几行再导一次。</div>
+      </sc-if>
+
+      <sc-if value="{{imp.s3}}" hint-placeholder-val="{{ false }}">
+        <div class="jw-card" style="padding: 16px 20px">
+          <div style="display: grid; grid-template-columns: 112px 1fr; gap: 10px 12px; font-size: 14px">
+            <span class="jw-muted">将创建</span><span><b class="num">45</b> 个账号（学生 43、教师 2）</span>
+            <span class="jw-muted">学校</span><span>北辰职业技术学院</span>
+            <span class="jw-muted">加入教学班</span><span>智能体部署 · 2026 秋 1 班、2 班</span>
+            <span class="jw-muted">初始密码</span><span>每人随机生成，首次登录强制修改</span>
+            <span class="jw-muted">跳过</span><span>3 行（校验未通过）</span>
+          </div>
+        </div>
+        <div class="jw-field"><label class="jw-label" for="im-pwd">输入你的密码确认</label><input id="im-pwd" class="jw-input" type="password" placeholder="你的登录密码" style="max-width: 320px"></div>
+        <sc-if value="{{importing}}" hint-placeholder-val="{{ false }}">
+          <div><div class="jw-progress"><span style="width: 64%"></span></div><div class="jw-meta" style="margin-top: 6px">正在导入 29 / 45，不要关闭此窗口</div></div>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{imp.s4}}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 0 4px; text-align: center">
+          <i class="ic ic-32 i-circlecheck" style="color: var(--color-feedback-success)" aria-hidden="true"></i>
+          <div style="font-size: 16px; font-weight: 600">已导入 45 个账号</div>
+          <div class="jw-meta">跳过 3 行 · 用时 4 秒</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--color-border-default); border-radius: 12px">
+          <i class="ic ic-24 i-sheet" style="color: var(--color-feedback-success)" aria-hidden="true"></i>
+          <div style="flex: 1; min-width: 0"><div style="font-weight: 500">初始密码表</div><div class="jw-meta">初始密码-北辰-20261103.xlsx · 45 个账号</div></div>
+          <button class="jw-btn primary"><i class="ic ic-14 i-download" aria-hidden="true"></i>下载</button>
+        </div>
+        <div class="jw-alert warning"><i class="ic ic-14 i-warn" aria-hidden="true"></i><span>初始密码表只能在这里下载，关闭窗口后不再提供。请通过学校渠道分发给本人，不要发到群里。</span></div>
+        <button class="jw-link" style="align-self: flex-start; font-size: 13px"><i class="ic ic-12 i-download" aria-hidden="true"></i> 下载未导入的 3 行</button>
+      </sc-if>
+    </div>
+    <div class="jw-dialog-foot" style="border-top: 1px solid var(--color-border-default); padding-top: 14px; padding-bottom: 14px">
+      <sc-if value="{{imp.s1}}" hint-placeholder-val="{{ true }}"><button class="jw-btn secondary" onClick="{{closeDialog}}">取消</button><button class="{{nextCls}}" onClick="{{toStep2}}">下一步：预览校验</button></sc-if>
+      <sc-if value="{{imp.s2}}" hint-placeholder-val="{{ false }}"><button class="jw-btn secondary" onClick="{{toStep1}}">重新上传</button><button class="jw-btn primary" onClick="{{toStep3}}">下一步：确认导入</button></sc-if>
+      <sc-if value="{{imp.s3}}" hint-placeholder-val="{{ false }}"><button class="jw-btn secondary" onClick="{{toStep2}}">上一步</button><button class="jw-btn primary" onClick="{{runImport}}">导入 45 个账号</button></sc-if>
+      <sc-if value="{{imp.s4}}" hint-placeholder-val="{{ false }}"><button class="jw-btn primary" onClick="{{closeDialog}}">完成</button></sc-if>
+    </div>
+  </div>
+  </sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+  <div class="jw-toast" role="status"><i class="ic ic-14 i-circlecheck" aria-hidden="true"></i>{{toast}}</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"scope":{"editor":"enum","options":["platform","school","social"],"default":"platform"},"demo":{"editor":"boolean","default":false},"$preview":{"width":1128,"height":900}}'>
+const ROWS = [
+  ['张晓雯', 'zhangxw', ['教师', '学校管理员'], '北辰职业技术学院', '正常', '今天 09:12'],
+  ['李明', 'liming01', ['学生'], '北辰职业技术学院', '正常', '今天 10:41'],
+  ['王磊', 'wanglei03', ['学生'], '北辰职业技术学院', '正常', '昨天 21:07'],
+  ['陈静', 'chenjing', ['教师'], '临江理工学院', '正常', '11-01 16:20'],
+  ['刘洋', 'liuyang22', ['学生'], '临江理工学院', '待改密', '从未登录'],
+  ['赵敏', 'zhaomin', ['学校管理员'], '西岭信息工程学校', '正常', '10-30 11:05'],
+  ['孙浩', 'sunhao07', ['学生'], '西岭信息工程学校', '已停用', '10-12 08:44'],
+  ['周婷', 'zhouting', ['学生'], '南湖职业技术学院', '正常', '今天 08:03'],
+  ['吴凡', 'wufan', ['教师'], '南湖职业技术学院', '正常', '昨天 14:32'],
+  ['郑雨', 'zhengyu', ['运营'], '平台', '正常', '今天 11:20'],
+  ['王宁', 'wangning', ['教师', '可开班'], '—', '正常', '今天 19:02', 'AI 漫剧周末班、AI 漫剧晚间班'],
+  ['何静', 'hejing', ['学生'], '—', '正常', '昨天 21:40', 'AI 漫剧周末班'],
+  ['钱多多', 'qianduoduo', ['学生'], '—', '待改密', '从未登录', 'AI 漫剧周末班']
+];
+const DEMO_ROWS = [
+  ['演示运营', 'demo-operator', ['运营'], '演示学校', '正常', '今天 14:02'],
+  ['演示教师', 'demo-teacher', ['教师'], '演示学校', '正常', '今天 14:02'],
+  ['演示学生', 'demo-student', ['学生'], '演示学校', '正常', '今天 14:02'],
+  ['学生 01', 'demo-s01', ['学生'], '演示学校', '正常', '昨天 16:40'],
+  ['学生 02', 'demo-s02', ['学生'], '演示学校', '正常', '昨天 16:38'],
+  ['学生 03', 'demo-s03', ['学生'], '演示学校', '待改密', '从未登录'],
+  ['学生 04', 'demo-s04', ['学生'], '演示学校', '已停用', '10-28 10:15'],
+  ['社会学员 01', 'demo-p01', ['学生'], '—', '正常', '昨天 20:05', '演示社会班'],
+  ['社会学员 02', 'demo-p02', ['学生'], '—', '待改密', '从未登录', '演示社会班']
+];
+const PREVIEW = [
+  [2, '何嘉怡', 'hejy01', '学生', '2026 秋 1 班', ''],
+  [3, '马俊', 'majun02', '学生', '2026 秋 1 班', ''],
+  [4, '罗佳', 'liming01', '学生', '2026 秋 1 班', '登录名已存在'],
+  [5, '郭宇', 'guoyu04', '班长', '2026 秋 2 班', '角色无效：班长'],
+  [6, '高晨', 'gaochen05', '学生', '2026 秋 2 班', ''],
+  [7, '', 'linan06', '学生', '2026 秋 2 班', '缺少姓名'],
+  [8, '林涛', 'lintao07', '教师', '', '']
+];
+const ROLE_CLS = { '学生': 'jw-tag neutral', '教师': 'jw-tag info', '学校管理员': 'jw-tag warning', '运营': 'jw-tag info', '可开班': 'jw-tag muted' };
+const STATUS_CLS = { '正常': 'jw-tag success', '待改密': 'jw-tag warning', '已停用': 'jw-tag muted' };
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.timers = [];
+    this.state = { q: '', role: '', status: '', school: '', newSocial: false, sel: {}, drawer: false, dialog: null, step: 1, file: false, onlyErr: false, importing: false, target: '', roles: { '学生': true }, toast: '', overrides: {} };
+  }
+  componentWillUnmount() { this.timers.forEach(clearTimeout); }
+  flash(msg) { this.setState({ toast: msg }); this.timers.push(setTimeout(() => this.setState({ toast: '' }), 2200)); }
+  renderVals() {
+    const s = this.state;
+    const demo = !!this.props.demo;
+    const school = this.props.scope === 'school';
+    const socialScope = this.props.scope === 'social';
+    const src = (demo ? DEMO_ROWS : school ? ROWS.filter((r) => r[3] === '北辰职业技术学院') : ROWS).filter((r) => !socialScope || r[3] === '—');
+    const list = src.filter((r) => (!s.school || r[3] === s.school) && (!s.q || r[0].indexOf(s.q) >= 0 || r[1].indexOf(s.q) >= 0) && (!s.role || r[2].indexOf(s.role) >= 0) && (!s.status || (s.overrides[r[1]] || r[4]) === s.status));
+    const selCount = Object.keys(s.sel).filter((k) => s.sel[k]).length;
+    const allOn = list.length > 0 && list.every((r) => s.sel[r[1]]);
+    const rows = list.map((r) => {
+      const status = s.overrides[r[1]] || r[4];
+      const on = !!s.sel[r[1]];
+      return {
+        name: r[0], login: r[1], school: r[3], socialClass: r[6] || '', last: r[5], status, on,
+        roles: r[2].map((x) => ({ label: x, cls: ROLE_CLS[x] })),
+        statusCls: STATUS_CLS[status], trCls: on ? 'is-selected' : '',
+        checkCls: 'jw-check' + (on ? ' is-on' : ''),
+        toggle: () => this.setState({ sel: { ...s.sel, [r[1]]: !on } }),
+        toggleLabel: status === '已停用' ? '恢复' : '停用',
+        toggleCls: status === '已停用' ? 'jw-link' : 'jw-link danger',
+        reset: () => this.setState({ dialog: 'reset', target: r[0] }),
+        disable: () => status === '已停用'
+          ? (this.setState({ overrides: { ...s.overrides, [r[1]]: '正常' } }), this.flash('已恢复 ' + r[0]))
+          : this.setState({ dialog: 'disable', target: r[0], targetLogin: r[1] })
+      };
+    });
+    const total = demo ? (socialScope ? '2' : '9') : socialScope ? '226' : school ? '2,214' : '15,846';
+    const preview = PREVIEW.filter((p) => !s.onlyErr || p[5]).map((p) => ({
+      n: p[0], name: p[1] || '—', login: p[2], role: p[3], cls2: p[4] || '—',
+      cls: p[5] ? 'is-error' : '', result: p[5] || '可导入', tagCls: p[5] ? 'jw-tag danger' : 'jw-tag success'
+    }));
+    const steps = ['上传表格', '预览校验', '确认导入', '完成'].map((label, i) => ({
+      n: i + 1, label, line: i < 3,
+      cls: 'jw-step' + (i + 1 === s.step ? ' is-active' : i + 1 < s.step ? ' is-done' : '')
+    }));
+    return {
+      scopeLabel: socialScope ? (demo ? '社会班（演示）' : '社会班 · 社会学员与开班老师') : demo ? '演示学校' : school ? '本校 · 北辰职业技术学院' : '全平台',
+      schoolName: demo ? '演示学校' : '北辰职业技术学院',
+      isPlatform: !school && !demo, isSchool: school || demo,
+      onSchool: (e) => this.setState({ school: e.target.value }),
+      onNewSchool: (e) => this.setState({ newSocial: e.target.value === 'none' }), newSocial: s.newSocial,
+      total, shown: rows.length, lastPage: demo ? '1' : school ? '111' : '793',
+      q: s.q, onQ: (e) => this.setState({ q: e.target.value }),
+      onRole: (e) => this.setState({ role: e.target.value }), onStatus: (e) => this.setState({ status: e.target.value }),
+      clearFilter: () => this.setState({ q: '', role: '', status: '', school: '' }),
+      rows, noRows: rows.length === 0,
+      noSelection: selCount === 0, hasSelection: selCount > 0, selCount,
+      allOn, allCls: 'jw-check' + (allOn ? ' is-on' : ''),
+      toggleAll: () => { const next = {}; if (!allOn) list.forEach((r) => { next[r[1]] = true; }); this.setState({ sel: next }); },
+      clearSel: () => this.setState({ sel: {} }),
+      bulkReset: () => this.setState({ dialog: 'reset', target: selCount + ' 个账号' }),
+      bulkDisable: () => this.setState({ dialog: 'disable', target: selCount + ' 个账号', targetLogin: null }),
+      drawer: s.drawer, openDrawer: () => this.setState({ drawer: true }), closeDrawer: () => this.setState({ drawer: false }),
+      roleChecks: ['学生', '教师', '学校管理员', '可开班'].map((x) => ({ label: x, on: !!s.roles[x], cls: 'jw-check' + (s.roles[x] ? ' is-on' : ''), toggle: () => this.setState({ roles: { ...s.roles, [x]: !s.roles[x] } }) })),
+      create: () => this.setState({ drawer: false, dialog: 'created', tempTitle: '账号已创建', tempLogin: 'hejiayi' }),
+      tempTitle: s.dialog === 'created' && s.tempLogin === 'hejiayi' ? '账号已创建' : '密码已重置', tempLogin: s.tempLogin || 'hejiayi',
+      dialog: !!s.dialog,
+      dlg: { created: s.dialog === 'created', reset: s.dialog === 'reset', disable: s.dialog === 'disable', import: s.dialog === 'import' },
+      closeDialog: () => this.setState({ dialog: null, importing: false }),
+      target: s.target,
+      confirmReset: () => this.setState({ dialog: 'created', tempLogin: s.target.indexOf('个账号') > 0 ? '（' + s.target + '）' : s.target, sel: {} }),
+      confirmDisable: () => {
+        const ov = { ...s.overrides };
+        if (s.targetLogin) ov[s.targetLogin] = '已停用'; else Object.keys(s.sel).forEach((k) => { if (s.sel[k]) ov[k] = '已停用'; });
+        this.setState({ dialog: null, overrides: ov, sel: {} }); this.flash('已停用 ' + s.target);
+      },
+      openImport: () => this.setState({ dialog: 'import', step: 1, file: false, onlyErr: false }),
+      steps, imp: { s1: s.step === 1, s2: s.step === 2, s3: s.step === 3, s4: s.step === 4 },
+      fileChosen: s.file, pickFile: () => this.setState({ file: true }),
+      nextCls: 'jw-btn primary' + (s.file ? '' : ' is-disabled'),
+      toStep1: () => this.setState({ step: 1, file: false }),
+      toStep2: () => { if (s.file) this.setState({ step: 2 }); },
+      toStep3: () => this.setState({ step: 3 }),
+      runImport: () => { this.setState({ importing: true }); this.timers.push(setTimeout(() => this.setState({ step: 4, importing: false }), 1200)); },
+      importing: s.importing,
+      preview, onlyErrCls: 'jw-switch' + (s.onlyErr ? '' : ' is-off'), toggleOnlyErr: () => this.setState({ onlyErr: !s.onlyErr }),
+      toast: s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

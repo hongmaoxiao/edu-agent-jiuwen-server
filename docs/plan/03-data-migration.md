@@ -12,7 +12,7 @@
 
 | 模块 | 表 | 说明 |
 |---|---|---|
-| account | `accounts` | 登录名、显示名、密码哈希、状态、是否平台运营、是否可建课 |
+| account | `accounts` | 登录名、显示名、密码哈希、状态、是否平台运营、是否可建课、是否可开班（P2 加） |
 | | `identity_providers` | 外部身份（SSO、华为账号），P1 建空表 |
 | | `sessions`、`refresh_tokens`、`model_tokens` | 只存哈希；可吊销 |
 | | `login_attempts` | 限流 |
@@ -23,8 +23,8 @@
 | | `course_versions` | 发布时生成的不可变快照（JSON），教学班只引用版本 |
 | | `chapters`、`labs` | 编辑中的草稿；实训含场景、交付物、边界、指引步骤（JSON） |
 | | `categories` | 项目页的品类卡片 |
-| teaching | `teaching_spaces` | 教学班：学校、课程版本、学期、状态 |
-| | `teaching_space_members` | 教师、助教、学生 |
+| teaching | `teaching_spaces` | 教学班：学校（社会班为空）、课程版本、学期、状态、开班人 |
+| | `teaching_space_members` | 教师、助教、学生；教师和学生身份以这里为准 |
 | | `lab_openings` | 实训对整个班、某个行政班或某个学生开放 |
 | learning | `lab_attempts` | 一次实训：学生、实训、客户端会话 id |
 | | `submissions` | 提交的材料：回答、文件、步骤、学员指令、核查回答、客户端自报用量 |
@@ -33,8 +33,8 @@
 | | `grade_drafts`、`grade_publications` | 教师评阅草稿和发布记录 |
 | | `appeals` | 申诉 |
 | models | `models`、`model_prices` | 模型目录和按时段生效的单价 |
-| metering | `usage_ledger` | 每次模型调用一行：账号、学校、教学班、课程、用途（智能体、AI 初评…）、预留量、实际用量、费用、状态 |
-| | `budgets`、`budget_grants` | 学校预算、教学班额度、学生每日上限 |
+| metering | `usage_ledger` | 每次模型调用一行：账号、学校（社会班为空）、教学班、课程、用途（智能体、AI 初评…）、预留量、实际用量、费用、状态 |
+| | `budgets`、`budget_grants` | 学校预算、教学班额度（社会班由运营直接批）、学生每日上限 |
 | jobs | `jobs` | 后台任务 |
 | ops | `audit_events`、`idempotency_keys` | 审计和幂等 |
 
@@ -75,7 +75,7 @@
 
 ## 5. 切换步骤（P2）
 
-1. Go 服务在 `api.agent.hrtiger.cn` 上线，导入课程内容，建演示学校、演示账号和三个演示身份。
+1. Go 服务在 `api.agent.hrtiger.cn` 上线，导入课程内容，建演示学校、演示账号和三个演示身份；P2 起再建演示社会班。
 2. 每人容器上线：新版客户端镜像读 Go 服务；旧的共用实例和 Python 平台先保留，作为回退。
 3. 在 Grok 和 Mac 上跑完整闭环，与现有线上版本逐项对比：目录内容、指引、空输入框、提交、评分分项、一次性完成封顶。
 4. agent.hrtiger.cn 切到「登录 → 每人容器」。先保留 Python 平台容器，观察一周无问题再下线。

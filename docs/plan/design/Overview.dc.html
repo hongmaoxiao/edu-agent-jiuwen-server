@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>管理 · 总览</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./jiuwen.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div class="jw-page" style="font-family: var(--font-body); color: var(--color-text-primary); background: var(--color-surface-content)">
+  <div class="jw-page-head">
+    <div>
+      <h2 class="jw-h2">总览</h2>
+      <p class="jw-sub">{{d.scopeLabel}} · 2026 年 11 月 3 日 星期二 · 数据每 5 分钟更新</p>
+    </div>
+    <div class="row">
+      <button class="jw-btn secondary"><i class="ic ic-14 i-refresh" aria-hidden="true"></i>刷新</button>
+      <button class="jw-btn secondary"><i class="ic ic-14 i-download" aria-hidden="true"></i>导出报表</button>
+    </div>
+  </div>
+
+  <sc-if value="{{d.demo}}" hint-placeholder-val="{{ false }}">
+    <div class="jw-alert info" style="margin-top: 20px"><i class="ic ic-14 i-info" aria-hidden="true"></i><span>演示环境：「全平台」只包含演示学校和演示社会班，看不到真实学校、账号和用量。</span></div>
+  </sc-if>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(156px, 1fr)); gap: 12px; margin-top: 24px">
+    <sc-for list="{{d.kpis}}" as="k" hint-placeholder-count="6">
+      <div class="jw-card jw-kpi">
+        <div class="jw-kpi-label"><span>{{k.label}}</span><i class="ic ic-14 {{k.icon}}" aria-hidden="true"></i></div>
+        <div class="jw-kpi-value">{{k.value}}<span class="jw-kpi-unit">{{k.unit}}</span></div>
+        <div class="jw-kpi-foot">{{k.foot}}</div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px">
+    <section class="jw-card jw-card-pad" style="flex: 2 1 520px; min-width: 0">
+      <div class="jw-card-head">
+        <div>
+          <h3 class="jw-section-title">Token 趋势</h3>
+          <div class="jw-meta" style="margin-top: 2px">每日输入 + 输出 Token，含全部模型 · 单位：万</div>
+        </div>
+        <div class="jw-seg" role="group" aria-label="时间范围" style="width: 148px">
+          <button class="{{range7Cls}}" onClick="{{pick7}}">近 7 天</button>
+          <button class="{{range30Cls}}" onClick="{{pick30}}">近 30 天</button>
+        </div>
+      </div>
+      <div style="position: relative" onMouseLeave="{{clearHover}}">
+        <svg viewBox="0 0 720 248" style="display: block; width: 100%; height: auto" role="img" aria-label="Token 每日趋势折线图">
+          <sc-for list="{{chart.yTicks}}" as="t" hint-placeholder-count="5">
+            <line x1="52" x2="704" y1="{{t.y}}" y2="{{t.y}}" stroke="var(--color-chart-grid)" stroke-width="1"></line>
+            <text x="44" y="{{t.ty}}" text-anchor="end" class="jw-axis">{{t.label}}</text>
+          </sc-for>
+          <line x1="52" x2="704" y1="216" y2="216" stroke="var(--color-chart-axis)" stroke-width="1"></line>
+          <sc-for list="{{chart.xTicks}}" as="t" hint-placeholder-count="7">
+            <text x="{{t.x}}" y="236" text-anchor="middle" class="jw-axis">{{t.label}}</text>
+          </sc-for>
+          <path d="{{chart.area}}" fill="var(--color-chart-area)" stroke="none"></path>
+          <path d="{{chart.line}}" fill="none" stroke="var(--color-chart-series-1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
+          <sc-if value="{{hover}}" hint-placeholder-val="{{ false }}">
+            <line x1="{{hover.x}}" x2="{{hover.x}}" y1="12" y2="216" stroke="var(--color-border-hover)" stroke-width="1"></line>
+            <circle cx="{{hover.x}}" cy="{{hover.y}}" r="5" fill="var(--color-chart-series-1)" stroke="var(--color-surface-card)" stroke-width="2"></circle>
+          </sc-if>
+          <circle cx="{{chart.last.x}}" cy="{{chart.last.y}}" r="4" fill="var(--color-chart-series-1)" stroke="var(--color-surface-card)" stroke-width="2"></circle>
+          <sc-for list="{{chart.hits}}" as="h" hint-placeholder-count="7">
+            <rect x="{{h.x}}" y="12" width="{{h.w}}" height="204" fill="transparent" onMouseEnter="{{h.enter}}"></rect>
+          </sc-for>
+        </svg>
+        <sc-if value="{{hover}}" hint-placeholder-val="{{ false }}">
+          <div class="jw-tooltip" style="left: {{hover.left}}; top: 8px">
+            <div class="jw-tooltip-title">{{hover.date}}</div>
+            <div class="jw-tooltip-row"><span class="jw-swatch" style="background: var(--color-chart-series-1)"></span>Token<b>{{hover.value}}</b></div>
+            <div class="jw-tooltip-row" style="color: var(--color-text-secondary)">较前一日<b style="color: var(--color-text-primary)">{{hover.delta}}</b></div>
+          </div>
+        </sc-if>
+      </div>
+    </section>
+
+    <section class="jw-card jw-card-pad" style="flex: 1 1 300px; min-width: 0">
+      <div class="jw-card-head">
+        <div>
+          <h3 class="jw-section-title">模型调用分布</h3>
+          <div class="jw-meta" style="margin-top: 2px">本月 Token 占比</div>
+        </div>
+        <button class="jw-link" style="font-size: 13px">模型明细</button>
+      </div>
+      <div style="display: flex; justify-content: center; position: relative">
+        <svg viewBox="0 0 160 160" width="168" height="168" role="img" aria-label="模型调用分布环形图" onMouseLeave="{{clearSlice}}">
+          <circle cx="80" cy="80" r="60" fill="none" stroke="var(--color-surface-muted)" stroke-width="18"></circle>
+          <sc-for list="{{donut.slices}}" as="s" hint-placeholder-count="5">
+            <circle cx="80" cy="80" r="60" fill="none" stroke="{{s.color}}" stroke-width="{{s.sw}}" stroke-dasharray="{{s.dash}}" stroke-dashoffset="{{s.offset}}" transform="rotate(-90 80 80)" onMouseEnter="{{s.enter}}" style="cursor: pointer; transition: stroke-width 120ms ease"></circle>
+          </sc-for>
+          <text x="80" y="74" text-anchor="middle" style="font-size: 11px; fill: var(--color-text-meta)">{{donut.centerLabel}}</text>
+          <text x="80" y="96" text-anchor="middle" style="font-size: 20px; font-weight: 600; fill: var(--color-text-primary)">{{donut.centerValue}}</text>
+        </svg>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 12px">
+        <sc-for list="{{donut.slices}}" as="s" hint-placeholder-count="5">
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 20px">
+            <span class="jw-swatch" style="background: {{s.color}}"></span>
+            <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{s.name}}</span>
+            <span class="num" style="color: var(--color-text-secondary)">{{s.pct}}%</span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </div>
+
+  <section class="jw-card jw-card-pad" style="margin-top: 12px">
+    <div class="jw-card-head">
+      <div>
+        <h3 class="jw-section-title">{{d.rankTitle}}</h3>
+        <div class="jw-meta" style="margin-top: 2px">{{d.rankSub}}</div>
+      </div>
+      <button class="jw-link" style="font-size: 13px">{{d.rankMore}}</button>
+    </div>
+    <div style="overflow-x: auto">
+      <table class="jw-table" style="min-width: 640px">
+        <thead><tr><th style="width: 40px">#</th><th>{{d.rankCol}}</th><th style="width: 34%">本月 Token</th><th class="r">学生</th><th class="r">AI 实训调用</th><th class="r">占比</th></tr></thead>
+        <tbody>
+          <sc-for list="{{d.rank}}" as="r" hint-placeholder-count="6">
+            <tr>
+              <td class="num" style="color: var(--color-text-secondary)">{{r.n}}</td>
+              <td><span>{{r.name}}</span><sc-if value="{{r.tag}}" hint-placeholder-val="{{ false }}"><span class="jw-tag info" style="margin-left: 8px">{{r.tag}}</span></sc-if></td>
+              <td><div style="display: flex; align-items: center; gap: 10px"><div class="jw-bar-track" style="flex: 1"><div class="jw-bar-fill" style="width: {{r.w}}%"></div></div><span class="num" style="width: 72px; text-align: right">{{r.tokens}}</span></div></td>
+              <td class="r num">{{r.students}}</td>
+              <td class="r num">{{r.calls}}</td>
+              <td class="r num" style="color: var(--color-text-secondary)">{{r.share}}</td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"variant":{"editor":"enum","options":["platform","school","social"],"default":"platform"},"demo":{"editor":"boolean","default":false},"$preview":{"width":1128,"height":1240}}'>
+const MODELS = [
+  ['豆包 Pro', 40.6, '--color-chart-series-1'],
+  ['豆包 Lite', 24.8, '--color-chart-series-2'],
+  ['DeepSeek V4.1 Flash', 20.4, '--color-chart-series-3'],
+  ['DeepSeek V4 Pro（思考）', 14.1, '--color-chart-series-4'],
+  ['其他 3 个本地模型', 0.1, '--color-chart-other']
+];
+const DATA = {
+  platform: {
+    scopeLabel: '全平台', base: 1700, cumulative: '11.79', cumUnit: '亿', units: ['接入学校', '9', '所', '另有 6 个社会班', 'i-cap'],
+    students: '13,136', calls: '34.68', callsUnit: '万',
+    rankTitle: '学校与社会班用量排行', rankSub: '按本月 Token 排序；社会班按班列出', rankMore: '查看全部', rankCol: '学校 / 社会班',
+    rank: [['北辰职业技术学院', 1032, '2,146', '6.21 万'], ['临江理工学院', 884, '1,980', '5.48 万'], ['西岭信息工程学校', 641, '1,622', '4.37 万'], ['南湖职业技术学院', 590, '1,540', '4.02 万'], ['东川商贸学校', 452, '1,318', '3.30 万'], ['AI 漫剧周末班 · 王宁', 398, '20', '0.41 万', '社会班'], ['青原科技学院', 366, '1,205', '2.86 万']]
+  },
+  social: {
+    scopeLabel: '社会班', base: 120, cumulative: '8,640', cumUnit: '万', units: ['社会班', '6', '个', '额度由运营直接批给班级', 'i-users'],
+    students: '214', calls: '1.86', callsUnit: '万',
+    rankTitle: '社会班用量排行', rankSub: '社会学员没有学校，按班统计', rankMore: '查看全部 6 个', rankCol: '社会班 · 开班老师',
+    rank: [['AI 漫剧周末班 · 王宁', 98, '20', '4,120 次'], ['FDE 冲刺营 · 陈静', 76, '24', '3,560 次'], ['AI 漫剧晚间班 · 王宁', 54, '18', '2,410 次'], ['智能体部署 · 企业内训 A', 41, '36', '2,080 次']]
+  },
+  demoSocial: {
+    scopeLabel: '社会班（演示）', base: 6, cumulative: '412', cumUnit: '万', units: ['社会班', '1', '个', '演示社会班', 'i-users'],
+    students: '20', calls: '806', callsUnit: '次',
+    rankTitle: '社会班用量排行', rankSub: '演示环境只有一个社会班', rankMore: '查看教学班', rankCol: '社会班',
+    rank: [['演示社会班 · AI 漫剧周末班', 14.6, '20', '806 次']]
+  },
+  school: {
+    scopeLabel: '本校 · 北辰职业技术学院', base: 300, cumulative: '1.92', cumUnit: '亿', units: ['教学班', '12', '个', '本学期开课 12 个', 'i-users'],
+    students: '2,146', calls: '6.21', callsUnit: '万',
+    rankTitle: '教学班用量排行', rankSub: '按本月 Token 排序', rankMore: '查看全部 12 个', rankCol: '教学班',
+    rank: [['智能体部署 · 2026 秋 1 班', 168, '46', '1.12 万'], ['智能体部署 · 2026 秋 2 班', 151, '44', '0.98 万'], ['知识工程 · 2026 秋 1 班', 122, '48', '0.86 万'], ['场景判断 · 2026 秋 3 班', 97, '40', '0.71 万'], ['场景判断 · 2026 秋 1 班', 88, '42', '0.66 万'], ['知识工程 · 2026 秋 2 班', 64, '39', '0.49 万']]
+  },
+  demo: {
+    scopeLabel: '全平台（演示）', base: 14, cumulative: '1,286', cumUnit: '万', units: ['接入学校', '1', '所', '只有演示学校', 'i-cap'],
+    students: '48', calls: '1,932', callsUnit: '次',
+    rankTitle: '教学班用量排行', rankSub: '演示环境只有一所学校，按教学班排行', rankMore: '查看教学班', rankCol: '教学班',
+    rank: [['智能体部署 · 2026 秋 1 班', 27.4, '32', '1,206 次'], ['智能体部署 · 2026 秋 2 班', 12.9, '16', '726 次']]
+  }
+};
+function noise(i, seed) { const v = Math.sin(i * 12.9898 + seed * 78.233) * 43758.5453; return v - Math.floor(v); }
+function fmtWan(v) {
+  if (v >= 10000) return (v / 10000).toFixed(2) + ' 亿';
+  if (v >= 100) return Math.round(v).toLocaleString('en-US') + ' 万';
+  return v.toFixed(1) + ' 万';
+}
+function niceStep(max) {
+  const raw = max / 4; const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const r = raw / mag; const m = r <= 1 ? 1 : r <= 2 ? 2 : r <= 2.5 ? 2.5 : r <= 5 ? 5 : 10;
+  return m * mag;
+}
+const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { range: 7, hover: null, slice: null }; }
+  series(key, base) {
+    const out = []; const end = new Date(2026, 10, 3);
+    for (let i = 29; i >= 0; i--) {
+      const dt = new Date(end); dt.setDate(end.getDate() - i);
+      const dow = dt.getDay(); const k = 29 - i;
+      const weekend = dow === 0 || dow === 6 ? 0.42 : 1;
+      const v = base * weekend * (0.82 + 0.3 * noise(k, key.length) + k * 0.006);
+      out.push({ date: dt, v });
+    }
+    return out;
+  }
+  renderVals() {
+    const v = String(this.props.variant || '');
+    const social = v === 'social';
+    const variantKey = this.props.demo ? (social ? 'demoSocial' : 'demo') : social ? 'social' : (v === 'school' || v.indexOf('本校') >= 0 ? 'school' : 'platform');
+    const D = DATA[variantKey];
+    const all = this.series(variantKey, D.base);
+    const today = all[all.length - 1].v;
+    const month = all.filter((p) => p.date.getMonth() === 10).reduce((a, p) => a + p.v, 0);
+    const yesterday = all[all.length - 2].v;
+    const s = this.state;
+    const pts = all.slice(-s.range);
+    const max = Math.max.apply(null, pts.map((p) => p.v));
+    const step = niceStep(max); const top = Math.ceil(max / step) * step;
+    const X0 = 52, X1 = 704, Y0 = 216, Y1 = 16;
+    const xAt = (i) => X0 + 12 + (i * (X1 - X0 - 24)) / (pts.length - 1);
+    const yAt = (v) => Y0 - (v / top) * (Y0 - Y1);
+    const coords = pts.map((p, i) => ({ x: xAt(i), y: yAt(p.v), p, i }));
+    const line = coords.map((c, i) => (i ? 'L' : 'M') + c.x.toFixed(1) + ' ' + c.y.toFixed(1)).join(' ');
+    const area = line + ' L' + coords[coords.length - 1].x.toFixed(1) + ' ' + Y0 + ' L' + coords[0].x.toFixed(1) + ' ' + Y0 + ' Z';
+    const yTicks = [];
+    for (let v = 0; v <= top + 1e-9; v += step) yTicks.push({ y: yAt(v), ty: yAt(v) + 4, label: v >= 10000 ? (v / 10000) + '亿' : v.toLocaleString('en-US') });
+    const md = (d) => (d.getMonth() + 1) + '-' + String(d.getDate()).padStart(2, '0');
+    const every = s.range === 7 ? 1 : 5;
+    const xTicks = coords.filter((c) => (pts.length - 1 - c.i) % every === 0).map((c) => ({ x: c.x, label: c.i === pts.length - 1 ? '今天' : md(c.p.date) }));
+    const half = (X1 - X0 - 24) / (pts.length - 1) / 2;
+    const hits = coords.map((c) => ({ x: c.x - half, w: half * 2, enter: () => this.setState({ hover: c.i }) }));
+    let hover = null;
+    if (s.hover !== null && coords[s.hover]) {
+      const c = coords[s.hover];
+      const prevP = s.hover > 0 ? pts[s.hover - 1] : all[all.length - s.range - 1];
+      const delta = prevP ? ((c.p.v - prevP.v) / prevP.v) * 100 : null;
+      const pct = (c.x / 720) * 100;
+      hover = { x: c.x, y: c.y, value: fmtWan(c.p.v), date: md(c.p.date) + ' 周' + WEEK[c.p.date.getDay()] + (c.i === pts.length - 1 ? ' · 截至 14:00' : ''),
+        delta: delta === null ? '—' : (delta >= 0 ? '+' : '') + delta.toFixed(1) + '%', left: pct > 62 ? 'calc(' + pct + '% - 168px)' : 'calc(' + pct + '% + 12px)' };
+    }
+    const C = 2 * Math.PI * 60;
+    let acc = 0;
+    const slices = MODELS.map((m, idx) => {
+      const len = Math.max((m[1] / 100) * C - 2, 1.2);
+      const out = { name: m[0], pct: m[1].toFixed(1), color: 'var(' + m[2] + ')', dash: len.toFixed(2) + ' ' + C.toFixed(2), offset: (-acc).toFixed(2),
+        sw: s.slice === idx ? 22 : 18, enter: () => this.setState({ slice: idx }) };
+      acc += (m[1] / 100) * C;
+      return out;
+    });
+    const hs = s.slice !== null ? MODELS[s.slice] : null;
+    const maxRank = D.rank[0][1]; const totalRank = D.rank.reduce((a, r) => a + r[1], 0);
+    const dTrend = ((today - yesterday) / yesterday) * 100;
+    return {
+      d: {
+        demo: !!this.props.demo, scopeLabel: this.props.demo && this.props.variant === 'school' ? '演示学校' : D.scopeLabel, rankTitle: D.rankTitle, rankSub: D.rankSub, rankMore: D.rankMore, rankCol: D.rankCol,
+        kpis: [
+          { label: '今日 Token', icon: 'i-activity', value: fmtWan(today).replace(/ [万亿]$/, ''), unit: fmtWan(today).slice(-1), foot: '较昨日 ' + (dTrend >= 0 ? '+' : '') + dTrend.toFixed(1) + '% · 截至 14:00' },
+          { label: '本月 Token', icon: 'i-chart', value: fmtWan(month).replace(/ [万亿]$/, ''), unit: fmtWan(month).slice(-1), foot: '11 月 1 日起，按北京时间' },
+          { label: '累计 Token', icon: 'i-server', value: D.cumulative, unit: D.cumUnit, foot: '含历史迁移数据' },
+          { label: D.units[0], icon: D.units[4], value: D.units[1], unit: D.units[2], foot: D.units[3] },
+          { label: '覆盖学生', icon: 'i-users', value: D.students, unit: '人', foot: '已开通账号的学生' },
+          { label: 'AI 实训调用', icon: 'i-flask', value: D.calls, unit: D.callsUnit, foot: '每次调用可追溯到学生和实训' }
+        ],
+        rank: D.rank.map((r, i) => ({ n: i + 1, name: r[0], tag: r[4] || '', tokens: fmtWan(r[1]), w: Math.round((r[1] / maxRank) * 100), students: r[2], calls: r[3], share: ((r[1] / totalRank) * 100).toFixed(1) + '%' }))
+      },
+      range7Cls: s.range === 7 ? 'is-active' : '', range30Cls: s.range === 30 ? 'is-active' : '',
+      pick7: () => this.setState({ range: 7, hover: null }), pick30: () => this.setState({ range: 30, hover: null }),
+      chart: { yTicks, xTicks, line, area, hits, last: coords[coords.length - 1] },
+      hover, clearHover: () => this.setState({ hover: null }),
+      donut: { slices, centerLabel: hs ? hs[0] : '本月 Token', centerValue: hs ? hs[1].toFixed(1) + '%' : fmtWan(month) },
+      clearSlice: () => this.setState({ slice: null })
+    };
+  }
+}
+</script>
+</body>
+</html>

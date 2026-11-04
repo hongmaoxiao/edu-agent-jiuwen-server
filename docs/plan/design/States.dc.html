@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>状态总表</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./jiuwen.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.cell{position:relative;display:flex;flex-direction:column;height:180px;overflow:hidden;border:1px solid var(--color-border-default);border-radius:10px;background:var(--color-surface-content)}
+.cell-head{display:flex;align-items:center;justify-content:space-between;height:34px;padding:0 12px;border-bottom:1px solid var(--color-border-default);font-size:12px;font-weight:600}
+.cell-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px 14px;text-align:center}
+.cell .jw-state-icon{width:32px;height:32px;margin-bottom:2px;border-radius:8px}
+.cell .t{font-size:13px;font-weight:600}
+.cell .d{font-size:11px;line-height:1.5;color:var(--color-text-secondary)}
+.cell .jw-btn{height:26px;padding:0 10px;font-size:12px;border-radius:6px}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1500px; box-sizing: border-box; padding: 56px 64px; background: var(--color-surface-page); font-family: var(--font-body); color: var(--color-text-primary)">
+  <h1 style="margin: 0; font-size: 32px; font-weight: 700">状态总表</h1>
+  <p style="margin: 10px 0 0; max-width: 1100px; font-size: 15px; line-height: 1.7; color: var(--color-text-tertiary)">每页都有空、加载、出错、无权限四种状态。状态只出现在出问题的那块区域里，页头和二级栏照常显示，用户始终知道自己在哪。智教云的「首次初始化向导」不迁，改成空状态里的下一步按钮。</p>
+
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-top: 28px">
+    <sc-for list="{{patterns}}" as="p" hint-placeholder-count="4">
+      <div class="jw-card" style="padding: 16px 18px">
+        <div class="row" style="gap: 8px"><span class="{{p.iconCls}}" style="width: 32px; height: 32px; margin: 0; border-radius: 8px"><i class="ic {{p.icon}}" aria-hidden="true"></i></span><span style="font-size: 16px; font-weight: 600">{{p.name}}</span></div>
+        <ul style="margin: 12px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.75; color: var(--color-text-tertiary)">
+          <sc-for list="{{p.rules}}" as="r" hint-placeholder-count="3"><li>{{r}}</li></sc-for>
+        </ul>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 132px repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 32px; align-items: center">
+    <span></span>
+    <sc-for list="{{cols}}" as="c" hint-placeholder-count="4"><span style="font-size: 14px; font-weight: 600">{{c}}</span></sc-for>
+    <sc-for list="{{rows}}" as="row" hint-placeholder-count="5">
+      <div><div style="font-size: 14px; font-weight: 600">{{row.page}}</div><div class="jw-meta">{{row.where}}</div></div>
+      <sc-for list="{{row.cells}}" as="c" hint-placeholder-count="4">
+        <div class="cell">
+          <div class="cell-head"><span>{{row.page}}</span><span class="jw-meta" style="font-weight: 400">{{row.scope}}</span></div>
+          <sc-if value="{{c.isLoading}}" hint-placeholder-val="{{ false }}">
+            <div style="flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 8px">
+              <sc-if value="{{c.kpi}}" hint-placeholder-val="{{ false }}"><div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px"><div class="jw-skel" style="height: 40px"></div><div class="jw-skel" style="height: 40px"></div><div class="jw-skel" style="height: 40px"></div></div><div class="jw-skel" style="flex: 1"></div></sc-if>
+              <sc-if value="{{c.table}}" hint-placeholder-val="{{ false }}"><div class="jw-skel" style="height: 18px; opacity: .6"></div><div class="jw-skel" style="height: 14px"></div><div class="jw-skel" style="height: 14px; width: 92%"></div><div class="jw-skel" style="height: 14px; width: 96%"></div><div class="jw-skel" style="height: 14px; width: 88%"></div><div class="jw-skel" style="height: 14px; width: 94%"></div></sc-if>
+              <sc-if value="{{c.split}}" hint-placeholder-val="{{ false }}"><div style="flex: 1; display: flex; gap: 8px"><div style="width: 34%; display: flex; flex-direction: column; gap: 6px"><div class="jw-skel" style="height: 26px"></div><div class="jw-skel" style="height: 26px"></div><div class="jw-skel" style="height: 26px"></div><div class="jw-skel" style="height: 26px"></div></div><div style="flex: 1; display: flex; flex-direction: column; gap: 6px"><div class="jw-skel" style="height: 18px; width: 60%"></div><div class="jw-skel" style="flex: 1"></div></div></div></sc-if>
+              <sc-if value="{{c.tree}}" hint-placeholder-val="{{ false }}"><div style="flex: 1; display: flex; gap: 8px"><div style="width: 30%; display: flex; flex-direction: column; gap: 6px"><div class="jw-skel" style="height: 12px"></div><div class="jw-skel" style="height: 12px; margin-left: 10px"></div><div class="jw-skel" style="height: 12px; margin-left: 10px"></div><div class="jw-skel" style="height: 12px"></div><div class="jw-skel" style="height: 12px; margin-left: 10px"></div></div><div style="flex: 1; display: flex; flex-direction: column; gap: 6px"><div class="jw-skel" style="height: 22px"></div><div class="jw-skel" style="height: 44px"></div><div class="jw-skel" style="height: 22px"></div></div></div></sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{c.isBlock}}" hint-placeholder-val="{{ true }}">
+            <div class="cell-body">
+              <span class="{{c.iconCls}}"><i class="ic ic-14 {{c.icon}}" aria-hidden="true"></i></span>
+              <div class="t">{{c.t}}</div>
+              <div class="d">{{c.d}}</div>
+              <div class="row" style="gap: 6px; justify-content: center; margin-top: 4px"><sc-for list="{{c.actions}}" as="a" hint-placeholder-count="1"><span class="{{a.cls}}">{{a.label}}</span></sc-for></div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+const ICON = { empty: ['jw-state-icon', 'i-inbox'], error: ['jw-state-icon danger', 'i-warn'], forbidden: ['jw-state-icon', 'i-lock'] };
+const ROWS = [
+  { page: '管理 → 总览', where: '运营 / 学校管理员', scope: '全平台', skel: 'kpi',
+    empty: ['还没有用量数据', '接入学校、开通模型后，这里显示 Token 和调用统计。', [['接入学校', 1], ['配置模型', 0]]],
+    error: ['用量数据加载失败', '计量服务没有响应。已显示的数据截至 14:05。', [['重试', 0]]],
+    forbidden: ['只有运营和学校管理员能看', '需要开通请联系学校管理员。', []] },
+  { page: '管理 → 账号', where: '运营 / 学校管理员', scope: '本校', skel: 'table',
+    empty: ['还没有账号', '先建一个教师账号，或用表格批量导入学生。', [['新建账号', 1], ['批量导入', 0]]],
+    error: ['账号列表加载失败', '网络中断，检查连接后重试。', [['重试', 0]]],
+    forbidden: ['需要学校管理员或运营权限', '教师可以在「教学 → 教学班」看本班学生。', []] },
+  { page: '教学 → 作品评阅', where: '教师', scope: '2026 秋 1 班', skel: 'split',
+    empty: ['还没有学生提交', '学生在实训里点「提交评测」后，作品出现在这里。', [['查看教学班', 0]]],
+    error: ['作品加载失败', '请求编号 rv-7f3a2c，可以发给运营排查。', [['重试', 0]]],
+    forbidden: ['你不是这个班的任课教师', '切换到你任教的教学班，或请学校管理员把你加入。', [['切换教学班', 0]]] },
+  { page: '教学 → 课程内容', where: '有建课权限的人', scope: '智能体部署', skel: 'tree',
+    empty: ['还没有课程', '新建一门源课程，或导入已有的课程包。', [['新建课程', 1], ['导入', 0]]],
+    error: ['保存失败，草稿还在', '有人同时修改了这门课。看一下差异再保存。', [['查看差异', 1], ['放弃我的改动', 0]]],
+    forbidden: ['你没有建课权限', '可以在「项目」里预览课程。需要建课请联系学校管理员。', [['去项目', 0]]] },
+  { page: '成绩 → 我的作品', where: '学生', scope: '2026 秋 1 班', skel: 'table',
+    empty: ['还没有提交作品', '完成实训后点「提交评测」，AI 初评和成绩都在这里。', [['去项目开始实训', 1]]],
+    error: ['成绩加载失败', '你的作品已经保存，不会丢失。稍后重试。', [['重试', 0]]],
+    forbidden: ['当前账号没有学生身份', '成绩只对加入教学班的学生开放。', []] }
+];
+class Component extends DCLogic {
+  renderVals() {
+    const block = (kind, v) => ({ isBlock: true, isLoading: false, iconCls: ICON[kind][0], icon: ICON[kind][1], t: v[0], d: v[1], actions: v[2].map((a) => ({ label: a[0], cls: 'jw-btn ' + (a[1] ? 'primary' : 'secondary') })) });
+    return {
+      patterns: [
+        { name: '空', icon: 'i-inbox', iconCls: 'jw-state-icon', rules: ['图标 48 方块 --color-surface-muted；标题 15/600；说明 13px 次要色', '给出下一步按钮，主按钮最多一个', '筛选后无结果另用「没有符合条件的…」+「清除筛选」'] },
+        { name: '加载', icon: 'i-refresh', iconCls: 'jw-state-icon', rules: ['骨架形状跟真实内容一致：指标卡、表格行、左右分栏', '300ms 内返回不显示骨架，避免闪一下', '超过 10 秒在骨架下方加一句「仍在加载」'] },
+        { name: '出错', icon: 'i-warn', iconCls: 'jw-state-icon danger', rules: ['只替换出错的那块区域，其余照常', '写清原因和能做什么；给「重试」', '保存冲突明确报错，不静默覆盖（新库用事务和幂等键）'] },
+        { name: '无权限', icon: 'i-lock', iconCls: 'jw-state-icon', rules: ['正常情况下入口不出现；只有从链接直接打开才会看到', '说明找谁开通，不给重试', '不暴露数据条数或学校名称'] }
+      ],
+      cols: ['空', '加载', '出错', '无权限'],
+      rows: ROWS.map((r) => ({
+        page: r.page, where: r.where, scope: r.scope,
+        cells: [
+          block('empty', r.empty),
+          { isBlock: false, isLoading: true, kpi: r.skel === 'kpi', table: r.skel === 'table', split: r.skel === 'split', tree: r.skel === 'tree' },
+          block('error', r.error),
+          block('forbidden', r.forbidden)
+        ]
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

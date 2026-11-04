@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>教学 · 课程内容</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./jiuwen.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="position: relative; display: flex; flex-direction: column; height: 100vh; min-height: 720px; font-family: var(--font-body); color: var(--color-text-primary); background: var(--color-surface-content)">
+  <div class="jw-page-head" style="padding: 24px 32px 16px; border-bottom: 1px solid var(--color-border-default); flex: none">
+    <div>
+      <button style="display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; cursor: pointer"><span class="jw-h2">智能体部署</span><i class="ic i-down" aria-hidden="true"></i></button>
+      <p class="jw-sub" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">源课程 · 3 章 · 6 个实训 <span class="jw-tag success">已发布 v3 · 10-30</span><span class="jw-tag warning">草稿有 {{changeCount}} 处改动</span></p>
+    </div>
+    <div class="row">
+      <button class="jw-btn secondary" onClick="{{openPreview}}"><i class="ic ic-14 i-eye" aria-hidden="true"></i>预览学生视图</button>
+      <button class="jw-btn secondary" onClick="{{saveDraft}}">保存草稿</button>
+      <button class="jw-btn primary" onClick="{{askPublish}}">发布 v4</button>
+    </div>
+  </div>
+
+  <div style="flex: 1; min-height: 0; display: flex">
+    <nav style="width: 264px; flex: none; display: flex; flex-direction: column; border-right: 1px solid var(--color-border-default); background: var(--color-sidebar-surface)" aria-label="课程结构">
+      <div style="flex: 1; overflow-y: auto; padding: 12px 8px">
+        <sc-for list="{{tree}}" as="ch" hint-placeholder-count="3">
+          <div style="margin-bottom: 8px">
+            <div style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 8px; font-size: 13px; font-weight: 600; color: var(--color-text-tertiary)"><i class="ic ic-12 i-down" aria-hidden="true"></i>{{ch.title}}</div>
+            <sc-for list="{{ch.labs}}" as="lab" hint-placeholder-count="2">
+              <button class="{{lab.cls}}" onClick="{{lab.pick}}" style="padding-left: 26px">
+                <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{lab.title}}</span>
+                <sc-if value="{{lab.tag}}" hint-placeholder-val="{{ false }}"><span class="{{lab.tagCls}}">{{lab.tag}}</span></sc-if>
+              </button>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--color-border-default)">
+        <button class="jw-btn ghost" style="flex: 1"><i class="ic ic-14 i-plus" aria-hidden="true"></i>章节</button>
+        <button class="jw-btn ghost" style="flex: 1"><i class="ic ic-14 i-plus" aria-hidden="true"></i>实训</button>
+      </div>
+    </nav>
+
+    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+      <div style="padding: 16px 24px 0; flex: none">
+        <div class="row" style="gap: 10px"><span style="font-size: 18px; font-weight: 600">WorkSwarm 工具调用最小闭环</span><span class="jw-tag warning">已改</span><span class="jw-meta">第 1 章 · 实训 1</span></div>
+        <div class="jw-tabs" style="margin-top: 14px" role="tablist">
+          <button class="{{tabCls.info}}" onClick="{{toInfo}}" role="tab">基本信息</button>
+          <button class="{{tabCls.guide}}" onClick="{{toGuide}}" role="tab">实训指引<span class="badge">{{stepCount}} 步</span></button>
+          <button class="{{tabCls.rubric}}" onClick="{{toRubric}}" role="tab">评分规则</button>
+        </div>
+      </div>
+
+      <sc-if value="{{tab.info}}" hint-placeholder-val="{{ false }}">
+      <div style="flex: 1; overflow-y: auto; padding: 20px 24px 40px">
+        <div style="max-width: 760px; display: flex; flex-direction: column; gap: 18px">
+          <div class="jw-field"><label class="jw-label" for="c-title">标题</label><input id="c-title" class="jw-input" value="WorkSwarm 工具调用最小闭环"></div>
+          <div class="jw-field"><label class="jw-label" for="c-scene">业务场景</label><textarea id="c-scene" class="jw-textarea" rows="3">售后客服智能体要调用订单查询、金额计算和工单草拟三个工具。用本地模拟数据实现最小工具调用闭环，证明参数错误在执行前被拒绝、重复请求不会重复执行、每次调用都有审计记录。</textarea></div>
+          <div class="jw-field">
+            <span class="jw-label">交付物</span>
+            <div class="row" style="gap: 6px; padding: 6px; border: 1px solid var(--color-border-input); border-radius: 8px">
+              <sc-for list="{{deliverables}}" as="d" hint-placeholder-count="5"><span class="jw-tag neutral" style="height: 24px; padding: 0 4px 0 8px; border-radius: 4px"><span class="mono">{{d}}</span><button class="jw-icon-btn sm" style="width: 18px; height: 18px" aria-label="移除 {{d}}"><i class="ic ic-12 i-x" aria-hidden="true"></i></button></span></sc-for>
+              <input style="flex: 1; min-width: 120px; height: 24px; border: 0; outline: none; font-size: 13px" placeholder="输入文件名，回车添加" aria-label="添加交付物">
+            </div>
+            <span class="jw-help">学生提交时会核对这些文件是否存在</span>
+          </div>
+          <div class="jw-field"><label class="jw-label" for="c-bound">边界</label><textarea id="c-bound" class="jw-textarea" rows="2">只用本地模拟数据，不连接真实订单、支付或工单系统，不读取任何真实密钥。</textarea><span class="jw-help">写清哪些事不能做，学生和 AI 初评都会看到</span></div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{tab.guide}}" hint-placeholder-val="{{ true }}">
+      <div style="flex: 1; min-height: 0; display: flex">
+        <div style="width: 248px; flex: none; overflow-y: auto; padding: 16px 12px 16px 24px">
+          <sc-for list="{{steps}}" as="st" hint-placeholder-count="5">
+            <button class="{{st.cls}}" onClick="{{st.pick}}" style="height: 40px; margin-bottom: 2px">
+              <i class="ic ic-14 i-grip" style="color: var(--color-text-disabled); cursor: grab" aria-hidden="true"></i>
+              <span class="jw-step-num" style="width: 18px; height: 18px; font-size: 11px">{{st.n}}</span>
+              <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{st.title}}</span>
+              <sc-if value="{{st.bad}}" hint-placeholder-val="{{ false }}"><i class="ic ic-14 i-alert" style="color: var(--color-feedback-danger)" aria-label="有问题"></i></sc-if>
+            </button>
+          </sc-for>
+          <button class="jw-btn ghost" style="width: 100%; justify-content: flex-start; margin-top: 4px; color: var(--color-text-secondary)"><i class="ic ic-14 i-plus" aria-hidden="true"></i>添加步骤</button>
+          <p class="jw-meta" style="margin: 12px 8px 0; line-height: 1.6">拖动调整顺序。建议 4–6 步，每步一个可检查的小目标。</p>
+        </div>
+
+        <div style="flex: 1; min-width: 0; overflow-y: auto; padding: 16px 24px 40px; border-left: 1px solid var(--color-border-default)">
+          <div style="max-width: 640px; display: flex; flex-direction: column; gap: 18px">
+            <div class="row" style="justify-content: space-between"><span style="font-size: 15px; font-weight: 600">第 {{cur.n}} 步</span><button class="jw-link danger" style="font-size: 13px">删除这一步</button></div>
+            <div class="jw-field"><label class="jw-label" for="g-title">标题</label><input id="g-title" class="jw-input" value="{{cur.title}}" onInput="{{onTitle}}"></div>
+            <div class="jw-field"><label class="jw-label" for="g-goal">目标</label><textarea id="g-goal" class="jw-textarea" rows="2" value="{{cur.goal}}" onInput="{{onGoal}}"></textarea><span class="jw-help">学生读完要知道这一步要做成什么样</span></div>
+            <div class="jw-field"><label class="jw-label" for="g-hint">提示<span class="jw-meta" style="margin-left: 6px; font-weight: 400">可选</span></label><textarea id="g-hint" class="jw-textarea" rows="2" value="{{cur.hint}}" onInput="{{onHint}}" placeholder="提醒学生容易忽略的地方，不要直接给答案"></textarea></div>
+            <div class="jw-field">
+              <span class="jw-label">完成标准 <span class="jw-meta" style="font-weight: 400">{{cur.checkCount}} / 4</span></span>
+              <sc-for list="{{cur.checks}}" as="c" hint-placeholder-count="2">
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <span class="jw-check" style="cursor: default" aria-hidden="true"></span>
+                  <input class="jw-input" value="{{c.text}}" onInput="{{c.onInput}}" aria-label="完成标准 {{c.n}}">
+                  <button class="jw-icon-btn sm" onClick="{{c.remove}}" aria-label="删除这条"><i class="ic ic-14 i-x" aria-hidden="true"></i></button>
+                </div>
+              </sc-for>
+              <sc-if value="{{cur.canAdd}}" hint-placeholder-val="{{ true }}"><button class="jw-link" style="align-self: flex-start; font-size: 13px" onClick="{{addCheck}}">+ 添加一条</button></sc-if>
+              <sc-if value="{{cur.tooFew}}" hint-placeholder-val="{{ false }}"><span class="jw-help" style="color: var(--color-feedback-danger)">每步需要 2–4 条完成标准，现在少 {{cur.missing}} 条</span></sc-if>
+              <span class="jw-help">学生勾选只是自查，不计分</span>
+            </div>
+            <div class="jw-field">
+              <div class="row" style="justify-content: space-between"><span class="jw-label">核查问题<span class="jw-meta" style="margin-left: 6px; font-weight: 400">可选</span></span><button class="{{qSwitchCls}}" onClick="{{toggleQ}}" aria-label="启用核查问题" aria-pressed="{{cur.hasQ}}"></button></div>
+              <sc-if value="{{cur.hasQ}}" hint-placeholder-val="{{ false }}"><input class="jw-input" value="{{cur.question}}" onInput="{{onQ}}" aria-label="核查问题"><span class="jw-help">学生的回答会随作品提交，用于「核查纠偏」评分</span></sc-if>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{tab.rubric}}" hint-placeholder-val="{{ false }}">
+      <div style="flex: 1; overflow-y: auto; padding: 20px 24px 40px">
+        <div class="jw-card" style="max-width: 760px">
+          <div class="row" style="justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--color-border-default)"><span style="font-weight: 600">WorkSwarm 工具调用最小闭环评分</span><a class="jw-link" style="font-size: 13px" href="#">在「评分规则」中编辑</a></div>
+          <sc-for list="{{rubric}}" as="r" hint-placeholder-count="6">
+            <div style="display: flex; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid var(--color-border-default); font-size: 14px"><span>{{r.t}}</span><span class="num jw-muted">{{r.m}} 分</span></div>
+          </sc-for>
+          <div style="display: flex; justify-content: space-between; padding: 10px 16px; font-size: 14px; font-weight: 600"><span>合计</span><span class="num">100 分</span></div>
+        </div>
+      </div>
+      </sc-if>
+    </div>
+  </div>
+
+  <sc-if value="{{preview}}" hint-placeholder-val="{{ false }}">
+  <div style="position: absolute; inset: 0; z-index: 70; display: flex; flex-direction: column; background: var(--color-surface-page); animation: jw-fade 200ms ease">
+    <div style="display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 16px 0 24px; border-bottom: 1px solid var(--color-border-default); background: var(--color-surface-elevated); flex: none">
+      <i class="ic i-eye" aria-hidden="true"></i><span style="font-weight: 600">学生看到的样子</span>
+      <div class="jw-seg" style="margin-left: 12px"><button class="{{pvDraftCls}}" onClick="{{pvDraft}}">草稿 v4</button><button class="{{pvPubCls}}" onClick="{{pvPub}}">已发布 v3</button></div>
+      <span class="jw-meta">预览不会记录学习进度</span>
+      <button class="jw-btn secondary" style="margin-left: auto" onClick="{{closePreview}}">退出预览</button>
+    </div>
+    <div style="flex: 1; overflow-y: auto; display: flex; justify-content: center; padding: 48px 24px">
+      <div style="width: min(768px, 100%)">
+        <div style="border: 1px solid var(--color-border-card); border-radius: 12px; background: var(--color-surface-card); box-shadow: var(--effect-chat-composer-shadow); overflow: hidden">
+          <div style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-bottom: 1px solid var(--color-border-default); font-size: 14px">
+            <i class="ic i-compass" style="color: var(--color-action-primary)" aria-hidden="true"></i><span style="font-weight: 500">WorkSwarm 工具调用最小闭环</span>
+            <span class="jw-meta" style="margin-left: auto">第 {{pv.n}} 步，共 {{pv.total}} 步</span><i class="ic ic-14 i-down" style="color: var(--color-text-secondary)" aria-hidden="true"></i><i class="ic ic-14 i-x" style="color: var(--color-text-secondary)" aria-hidden="true"></i>
+          </div>
+          <div style="display: flex; min-height: 360px">
+            <div style="width: 224px; flex: none; padding: 8px; border-right: 1px solid var(--color-border-default)">
+              <sc-for list="{{pv.steps}}" as="s" hint-placeholder-count="5">
+                <button style="{{s.style}}" onClick="{{s.pick}}"><span style="{{s.numStyle}}">{{s.n}}</span><span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{s.title}}</span></button>
+              </sc-for>
+            </div>
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+              <div style="flex: 1; padding: 20px 20px 12px">
+                <div style="font-size: 16px; font-weight: 600">{{pv.title}}</div>
+                <p style="margin: 6px 0 0; font-size: 14px; line-height: 1.6">{{pv.goal}}</p>
+                <sc-if value="{{pv.hint}}" hint-placeholder-val="{{ true }}"><div class="jw-hint" style="margin-top: 14px"><i class="ic ic-14 i-bulb" style="margin-top: 4px; color: var(--color-text-secondary)" aria-hidden="true"></i><span>{{pv.hint}}</span></div></sc-if>
+                <div class="jw-meta" style="margin: 16px 0 8px; font-size: 13px">完成标准</div>
+                <sc-for list="{{pv.checks}}" as="c" hint-placeholder-count="3">
+                  <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 14px; cursor: pointer"><button class="{{c.cls}}" onClick="{{c.toggle}}" aria-pressed="{{c.on}}" aria-label="{{c.text}}"><sc-if value="{{c.on}}" hint-placeholder-val="{{ false }}"><i class="ic ic-12 i-check" aria-hidden="true"></i></sc-if></button>{{c.text}}</label>
+                </sc-for>
+                <sc-if value="{{pv.question}}" hint-placeholder-val="{{ false }}">
+                  <div class="jw-meta" style="margin: 14px 0 6px; font-size: 13px">核查问题</div>
+                  <div style="font-size: 14px; margin-bottom: 6px">{{pv.question}}</div>
+                  <textarea class="jw-textarea" rows="2" placeholder="写下你具体做了什么、看到了什么" aria-label="核查回答"></textarea>
+                </sc-if>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-top: 1px solid var(--color-border-default)">
+                <span class="jw-meta" style="font-size: 13px">{{pv.left}}</span>
+                <button class="jw-btn secondary pill">完成本步</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top: 12px; height: 120px; border: 1px solid var(--color-border-card); border-radius: 16px; background: var(--color-surface-card); padding: 16px 18px; color: var(--color-text-placeholder); font-size: 14px">需要帮你做些什么？输入“/”快速引用技能及指令</div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{confirm}}" hint-placeholder-val="{{ false }}">
+  <div class="jw-dialog-wrap">
+    <button class="jw-backdrop" onClick="{{closeConfirm}}" aria-label="关闭"></button>
+    <div class="jw-dialog" role="dialog" aria-label="发布课程">
+      <div class="jw-dialog-head"><h3 class="jw-dialog-title">发布「智能体部署」v4？</h3></div>
+      <div class="jw-dialog-body">
+        <div style="font-size: 13px">
+          <div class="jw-muted" style="margin-bottom: 6px">相对 v3 的改动</div>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <span><span class="jw-tag warning">修改</span> WorkSwarm 工具调用最小闭环 · 实训指引第 3 步</span>
+            <span><span class="jw-tag info">新增</span> 用量监控与告警</span>
+          </div>
+        </div>
+        <p style="margin: 0; color: var(--color-text-tertiary)">使用这门课的 2 个教学班，学生下次进入实训时看到新版本。已开始的实训和已提交的作品不受影响。</p>
+      </div>
+      <div class="jw-dialog-foot"><button class="jw-btn secondary" onClick="{{closeConfirm}}">取消</button><button class="jw-btn primary" onClick="{{doPublish}}">发布</button></div>
+    </div>
+  </div>
+  </sc-if>
+  <sc-if value="{{toast}}" hint-placeholder-val="{{ false }}"><div class="jw-toast" role="status"><i class="ic ic-14 i-circlecheck" aria-hidden="true"></i>{{toast}}</div></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1128,"height":1000}}'>
+const TREE = [
+  ['第 1 章 工具调用基础', [['ws', 'WorkSwarm 工具调用最小闭环', '已改'], ['mcp', 'MCP 服务接入与权限边界', '']]],
+  ['第 2 章 能力边界与选型', [['l07', 'L07 · 能力边界判断与模型选型', ''], ['eval', '评测集设计与回归', '']]],
+  ['第 3 章 部署与运维', [['gray', '灰度发布与回滚', ''], ['mon', '用量监控与告警', '新增']]]
+];
+const GUIDE = [
+  { title: '读懂任务，定好边界', goal: '弄清这个实训要交付什么，哪些事不能做，再决定怎么分配给智能体。', hint: '先想好你要智能体分几次做，一次全交出去，出错时你很难判断问题在哪。', checks: ['能说出 3 个工具各自做什么', '知道哪些系统不能连接'], question: '' },
+  { title: '定义工具的参数约束', goal: '让智能体为 get_order、calc_amount、draft_ticket 写出参数 Schema。', hint: '想想数量能不能是负数，订单号格式有没有约束。你不说清楚，智能体就会自己假设。', checks: ['每个工具都有必填项', '每个字段都有类型或取值范围', '你读过文件，不只是看了回复'], question: '' },
+  { title: '让执行器拦住非法调用', goal: '校验放在执行前，非法参数被拒绝且给出原因，业务动作没有被执行。', hint: '', checks: ['拒绝时不执行工具'], question: '你用什么方法确认非法调用真的没有被执行？' },
+  { title: '处理重复调用并留下审计', goal: '同一个 request_id 只执行一次，每次调用都有审计记录，包括被拒绝的。', hint: '', checks: ['重复调用返回首次结果', '被拒绝的调用也写入 tool-audit.jsonl'], question: '' },
+  { title: '验证结果，准备提交', goal: '实际跑过用例，确认证据是真的，再提交评测。', hint: '', checks: ['至少 5 个用例，含非法参数和重复 request_id', 'tool-tests.csv 的结果和实际运行一致'], question: '智能体有没有哪里做错了或说得不准？你是怎么发现的？' }
+];
+const V3_STEP3 = { title: '让执行器拦住非法调用', goal: '校验放在执行前，非法参数被拒绝且给出原因，业务动作没有被执行。', hint: '', checks: ['拒绝时不执行工具', '拒绝原因说得清是哪个字段的问题'], question: '你用什么方法确认非法调用真的没有被执行？' };
+const RUBRIC = [['交付物完整', 15], ['参数校验与错误处理', 15], ['幂等与审计', 10], ['说明与证据', 10], ['指挥过程', 25], ['核查纠偏', 25]];
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.timers = [];
+    this.state = { tab: 'guide', lab: 'ws', idx: 2, steps: GUIDE.map((g) => ({ ...g, checks: g.checks.slice() })), preview: false, pvVer: 'draft', pvIdx: 0, pvChecks: {}, confirm: false, toast: '' };
+  }
+  componentWillUnmount() { this.timers.forEach(clearTimeout); }
+  flash(msg) { this.setState({ toast: msg }); this.timers.push(setTimeout(() => this.setState({ toast: '' }), 2200)); }
+  patch(fields) { const steps = this.state.steps.slice(); steps[this.state.idx] = { ...steps[this.state.idx], ...fields }; this.setState({ steps }); }
+  renderVals() {
+    const s = this.state;
+    const cur = s.steps[s.idx];
+    const pvSteps = s.pvVer === 'draft' ? s.steps : GUIDE.map((g, i) => (i === 2 ? V3_STEP3 : g));
+    const pv = pvSteps[s.pvIdx];
+    const pvOn = (j) => !!s.pvChecks[s.pvVer + s.pvIdx + '-' + j];
+    const unchecked = pv.checks.filter((c, j) => !pvOn(j)).length;
+    return {
+      changeCount: 4, stepCount: s.steps.length,
+      tree: TREE.map((ch) => ({ title: ch[0], labs: ch[1].map((l) => ({ title: l[1], tag: l[2], tagCls: l[2] === '新增' ? 'jw-tag info' : 'jw-tag warning', cls: 'jw-sec-row' + (l[0] === s.lab ? ' is-active' : ''), pick: () => this.setState({ lab: l[0] }) })) })),
+      tab: { info: s.tab === 'info', guide: s.tab === 'guide', rubric: s.tab === 'rubric' },
+      tabCls: { info: s.tab === 'info' ? 'is-active' : '', guide: s.tab === 'guide' ? 'is-active' : '', rubric: s.tab === 'rubric' ? 'is-active' : '' },
+      toInfo: () => this.setState({ tab: 'info' }), toGuide: () => this.setState({ tab: 'guide' }), toRubric: () => this.setState({ tab: 'rubric' }),
+      deliverables: ['tools.schema.json', 'tool_runner.py', 'tool-tests.csv', 'tool-audit.jsonl', 'README.md'],
+      steps: s.steps.map((st, i) => ({ n: i + 1, title: st.title, bad: st.checks.length < 2 || st.checks.length > 4, cls: 'jw-sec-row' + (i === s.idx ? ' is-active' : ''), pick: () => this.setState({ idx: i }) })),
+      cur: {
+        n: s.idx + 1, title: cur.title, goal: cur.goal, hint: cur.hint, question: cur.question, hasQ: !!cur.question || cur.q === true,
+        checkCount: cur.checks.length, canAdd: cur.checks.length < 4, tooFew: cur.checks.length < 2, missing: 2 - cur.checks.length,
+        checks: cur.checks.map((c, j) => ({ n: j + 1, text: c,
+          onInput: (e) => { const checks = cur.checks.slice(); checks[j] = e.target.value; this.patch({ checks }); },
+          remove: () => this.patch({ checks: cur.checks.filter((x, k) => k !== j) }) }))
+      },
+      onTitle: (e) => this.patch({ title: e.target.value }),
+      onGoal: (e) => this.patch({ goal: e.target.value }),
+      onHint: (e) => this.patch({ hint: e.target.value }),
+      onQ: (e) => this.patch({ question: e.target.value, q: true }),
+      addCheck: () => { if (cur.checks.length < 4) this.patch({ checks: cur.checks.concat(['']) }); },
+      qSwitchCls: 'jw-switch' + (cur.question || cur.q ? '' : ' is-off'),
+      toggleQ: () => (cur.question || cur.q) ? this.patch({ question: '', q: false }) : this.patch({ q: true }),
+      rubric: RUBRIC.map((r) => ({ t: r[0], m: r[1] })),
+      openPreview: () => this.setState({ preview: true, pvIdx: s.idx }), closePreview: () => this.setState({ preview: false }),
+      preview: s.preview,
+      pvDraftCls: s.pvVer === 'draft' ? 'is-active' : '', pvPubCls: s.pvVer === 'pub' ? 'is-active' : '',
+      pvDraft: () => this.setState({ pvVer: 'draft' }), pvPub: () => this.setState({ pvVer: 'pub' }),
+      pv: {
+        n: s.pvIdx + 1, total: pvSteps.length, title: pv.title, goal: pv.goal, hint: pv.hint, question: pv.question,
+        left: unchecked ? '还有 ' + unchecked + ' 项未勾选' : '可以进入下一步',
+        steps: pvSteps.map((st, i) => {
+          const on = i === s.pvIdx;
+          return { n: i + 1, title: st.title, pick: () => this.setState({ pvIdx: i }),
+            style: 'display: flex; align-items: center; gap: 8px; width: 100%; height: 40px; margin-bottom: 2px; padding: 0 8px; border: 0; border-radius: 8px; font-size: 14px; text-align: left; cursor: pointer; ' + (on ? 'background: var(--color-tag-info-surface); color: var(--color-text-primary); font-weight: 600' : 'background: transparent; color: var(--color-text-secondary)'),
+            numStyle: 'display: inline-flex; align-items: center; justify-content: center; flex: none; width: 20px; height: 20px; border-radius: 50%; font-size: 12px; ' + (on ? 'background: var(--color-action-primary); color: #fff' : 'border: 1px solid var(--color-border-strong)') };
+        }),
+        checks: pv.checks.filter((c) => c).map((c, j) => ({ text: c, on: pvOn(j), cls: 'jw-check' + (pvOn(j) ? ' is-on' : ''),
+          toggle: () => this.setState({ pvChecks: { ...s.pvChecks, [s.pvVer + s.pvIdx + '-' + j]: !pvOn(j) } }) }))
+      },
+      saveDraft: () => this.flash('草稿已保存'),
+      askPublish: () => this.setState({ confirm: true }), closeConfirm: () => this.setState({ confirm: false }),
+      confirm: s.confirm,
+      doPublish: () => { this.setState({ confirm: false }); this.flash('已发布 v4，2 个教学班会看到新版本'); },
+      toast: s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>
