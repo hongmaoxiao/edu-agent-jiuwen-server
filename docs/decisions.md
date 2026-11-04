@@ -37,3 +37,4 @@
   - 开工前把 Mac 的 Go 升到最新稳定版。
 - **PostgreSQL 也用最新稳定大版本**（11-03 用户）：现在是 18（18.6）。deepfate 用的 16 不跟；19 正式发布后再评估升级。
 - **监控分两步**（11-03 用户）：现在只做服务端埋点（`/metrics` 端口、HTTP 和连接池指标、业务指标）。采集、存储、看板、告警和 `promtool`，等上线后数据量起来再做，原 Q13 的选择也到那时再实测。
+- **Mac 上的 PostgreSQL 18 用 Docker 临时容器**（11-03 用户）：不用 Homebrew 装，避免连带升级 OpenSSL、krb5 等共享库；`scripts/with-test-db.sh` 自动起 `postgres:18.6` 容器，用完即删。

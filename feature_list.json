@@ -1,0 +1,29 @@
+{
+  "project": "edu-agent-jiuwen-server",
+  "current_phase": "P1",
+  "last_updated": "2026-11-03",
+  "features": [
+    {
+      "id": "SRV-001",
+      "title": "P1-A 仓库骨架、账号登录与学校",
+      "status": "in_progress",
+      "scope": "配置、PostgreSQL 18 迁移、/livez /readyz、指标端口、限流、CORS、客户端版本检查；登录、刷新令牌轮换与复用作废、退出、首次登录强制改密码、/v1/me；运营建学校，运营和学校管理员开账号；cmd/admin create-operator",
+      "acceptance": "Mac 上 make check 通过（含连库测试）；本地起服务后用 curl 走通：建运营 → 登录 → 建学校 → 开学校管理员 → 首次登录改密码 → 开教师和学生",
+      "evidence": []
+    },
+    {
+      "id": "SRV-002",
+      "title": "P1-B 演示账号与视角切换",
+      "status": "not_started",
+      "scope": "演示学校、三个演示身份、POST /v1/session/perspective、演示会话只看演示学校、全局设置只读、cmd/admin demo-reset",
+      "depends_on": ["SRV-001"]
+    },
+    {
+      "id": "SRV-003",
+      "title": "P1-C 课程内容导入",
+      "status": "not_started",
+      "scope": "courses、chapters、labs、指引、评分规则表；cmd/admin import-content 导入 FDE 51 个实训，可重复执行，不覆盖新系统里改过的内容",
+      "depends_on": ["SRV-001"]
+    }
+  ]
+}

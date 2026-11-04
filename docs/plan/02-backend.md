@@ -74,7 +74,7 @@ docs/               index.md、architecture.md、decisions/、session-handoff.md
   - `schema_migrations` 记录文件的 sha256，已执行过的文件被改动时直接报错；
   - 回滚靠新的迁移文件，不写 down 脚本。
 - **连接池**：`pgxpool` 上限做成配置项，池的状态作为指标暴露（见 §8）。
-- **测试**：`scripts/with-test-db.sh` 临时起一个 PostgreSQL 18（`initdb` 到临时目录，跑完删除），也可以通过 `EDU_TEST_DATABASE_URL` 指定现成的库。不用 SQLite，也不用 mock 代替数据库。
+- **测试**：`scripts/with-test-db.sh` 临时起一个 PostgreSQL 18，跑完删除。用 Docker 起 `postgres:18.6` 容器（11-03 用户选定，Mac 不用 Homebrew 装 18）。也可以通过 `EDU_TEST_DATABASE_URL` 指定现成的库。不用 SQLite，也不用 mock 代替数据库。
 - **备份**：同 deepfate 的 `backup.sh`。每天用 `pg_dump -Fc` 导出，保留 14 天；成功后写一个 textfile 指标，记录最近成功时间和大小，供备份过期告警使用。每个阶段上线前都要做一次恢复演练。
 - **扩展**：首版不装扩展。P5 做知识库时再评估 pgvector，到时用对应 18 的 pgvector 镜像，单独写 ADR。
 - **监控角色**：建一个只有 `pg_monitor` 权限的只读角色，给 postgres exporter 用。
@@ -249,8 +249,8 @@ PostgreSQL 表 `jobs` 加 `SELECT … FOR UPDATE SKIP LOCKED`，不引入消息�
   - Grok 上只有 PostgreSQL 客户端，没有服务端，也没有 Docker，所以不在 Grok 上补装这些，以 Mac 的结果为准。
   - Mac 环境（11-03 Codex 只读核对）：
     - 已经可用：Docker Desktop 27.5.1；Chrome 156 和 Python Playwright 1.64.1。deepfate 的 `make check` 11-03 在这台 Mac 上通过。
-    - 开工前要补：Go 从 1.27.1 升到 1.27.3；装 PostgreSQL 18 服务端（`brew install postgresql@18`）。现有的 16.15 是 deepfate 在用，保留不动。`promtool` 等到做告警时再装。
-    - 注意：`with-test-db.sh` 里写明 `postgresql@18` 的路径，不要依赖 `PATH` 里的 `initdb`、`pg_ctl`。本机 5432、15432 已经被 Docker 里的数据库占用，本仓的联调端口要另选。
+    - Go 已在 11-03 升到 1.27.3。PostgreSQL 18 不用 Homebrew 装（要连带升级 OpenSSL 等共享库），改用 Docker 临时容器（11-03 用户选定）。现有的 16.15 是 deepfate 在用，保留不动。`promtool` 等到做告警时再装。
+    - 注意：本机 5432、15432 已被 Docker 里的其他数据库占用，`with-test-db.sh` 每次随机选空闲端口。本机 5432、15432 已经被 Docker 里的数据库占用，本仓的联调端口要另选。
 
 ## 12. 测试
 

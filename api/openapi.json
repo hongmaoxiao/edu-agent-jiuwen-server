@@ -1,0 +1,646 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "edu-agent-jiuwen-server",
+    "version": "0.1.0",
+    "description": "基于 jiuwen 的 AI 教学实训平台后端。错误统一为 Error；写接口的范围放在路径里。客户端每次请求带 X-Client-Version，低于服务端最低版本时返回 426。"
+  },
+  "servers": [
+    {
+      "url": "https://api.agent.hrtiger.cn"
+    },
+    {
+      "url": "http://127.0.0.1:4020"
+    }
+  ],
+  "security": [
+    {
+      "bearer": []
+    }
+  ],
+  "paths": {
+    "/livez": {
+      "get": {
+        "summary": "进程存活",
+        "tags": [
+          "ops"
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": []
+      }
+    },
+    "/readyz": {
+      "get": {
+        "summary": "数据库可用且迁移已执行",
+        "tags": [
+          "ops"
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "description": "未就绪",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/v1/auth/login": {
+      "post": {
+        "summary": "账号密码登录。网页版的刷新令牌只放在 HttpOnly Cookie edu_refresh 里，响应体不含",
+        "tags": [
+          "auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tokens"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "login": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "client_app": {
+                    "type": "string",
+                    "enum": [
+                      "web",
+                      "desktop"
+                    ]
+                  }
+                },
+                "required": [
+                  "login",
+                  "password",
+                  "client_app"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/refresh": {
+      "post": {
+        "summary": "轮换刷新令牌。桌面版在请求体里带 refresh_token；网页版不带请求体，用 Cookie，且 Origin 必须是配置的网页来源。用过的刷新令牌再出现会作废整个会话",
+        "tags": [
+          "auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tokens"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "refresh_token": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/logout": {
+      "post": {
+        "summary": "退出登录：结束当前会话并清除刷新 Cookie",
+        "tags": [
+          "auth"
+        ],
+        "responses": {
+          "204": {
+            "description": "已退出"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": []
+      }
+    },
+    "/v1/auth/password": {
+      "post": {
+        "summary": "修改密码。首次登录必须先调用它；成功后保留当前会话，结束其他会话",
+        "tags": [
+          "auth"
+        ],
+        "responses": {
+          "204": {
+            "description": "已修改"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "current_password": {
+                    "type": "string"
+                  },
+                  "new_password": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "current_password",
+                  "new_password"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me": {
+      "get": {
+        "summary": "当前账号和所属学校及角色。首次登录未改密码时也可以调用",
+        "tags": [
+          "account"
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/schools": {
+      "get": {
+        "summary": "学校列表：运营看到全部，其他人只看到自己所在的学校",
+        "tags": [
+          "schools"
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "schools": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/School"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "summary": "新建学校（仅运营）",
+        "tags": [
+          "schools"
+        ],
+        "responses": {
+          "201": {
+            "description": "已创建",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/School"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/schools/{school}/members": {
+      "parameters": [
+        {
+          "name": "school",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "summary": "学校成员（运营、本校管理员）",
+        "tags": [
+          "schools"
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "members": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Member"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "summary": "在学校里开账号。只有运营能任命学校管理员；学校管理员能开教师和学生账号。初始密码只在本次响应里出现",
+        "tags": [
+          "schools"
+        ],
+        "responses": {
+          "201": {
+            "description": "已创建",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "member": {
+                      "$ref": "#/components/schemas/Member"
+                    },
+                    "initial_password": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "login": {
+                    "type": "string"
+                  },
+                  "display_name": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "school_admin",
+                      "teacher",
+                      "student"
+                    ]
+                  }
+                },
+                "required": [
+                  "login",
+                  "display_name",
+                  "role"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "访问令牌，15 分钟有效"
+      }
+    },
+    "responses": {
+      "Error": {
+        "description": "错误",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "稳定的大写错误码，如 UNAUTHENTICATED、PASSWORD_CHANGE_REQUIRED、CLIENT_TOO_OLD"
+              },
+              "message": {
+                "type": "string",
+                "description": "中文，可以直接展示"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          },
+          "request_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "Tokens": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "expires_in": {
+            "type": "integer"
+          },
+          "refresh_token": {
+            "type": "string",
+            "description": "只有桌面版有"
+          },
+          "must_change_password": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "access_token",
+          "expires_in",
+          "must_change_password"
+        ]
+      },
+      "Account": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "login": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "is_operator": {
+            "type": "boolean"
+          },
+          "can_create_courses": {
+            "type": "boolean"
+          },
+          "is_demo": {
+            "type": "boolean"
+          },
+          "must_change_password": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "disabled"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "login",
+          "display_name",
+          "is_operator",
+          "can_create_courses",
+          "is_demo",
+          "must_change_password",
+          "status"
+        ]
+      },
+      "School": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "is_demo": {
+            "type": "boolean"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "school_admin",
+                "teacher",
+                "student"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "city",
+          "is_demo"
+        ]
+      },
+      "Member": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/Account"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "account",
+          "roles"
+        ]
+      },
+      "Me": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/Account"
+          },
+          "schools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/School"
+            }
+          }
+        },
+        "required": [
+          "account",
+          "schools"
+        ]
+      }
+    }
+  }
+}
