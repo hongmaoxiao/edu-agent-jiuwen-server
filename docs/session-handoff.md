@@ -1,5 +1,39 @@
 # 会话交接
 
+## 2026-11-04：P1 客户端外壳，Mac 复测有条件通过
+
+**做了什么**（客户端仓库 worktree `edu-agent-jiuwen-platform`，分支 `feat/edu-platform-shell`，从 main 78686ae 切出，未推送、未合并、未部署）
+
+- `984075b`：
+  - 新插件 `extensions/edu_platform`；
+  - 宿主插件插槽：多页面、侧栏图标、nav filter、rail footer、app gate；
+  - 登录、首次改密、角色入口、二级栏、账号菜单、演示视角切换。
+- `f3c5c0d`：
+  - 修登录后落点被宿主路由覆盖；
+  - 运营默认带建课权限，不再因此出现「教学」入口。
+- `2ea52a7`：文档。交接与设计差异写在客户端 `docs/platform-shell.md`。
+- 设计稿交接在本仓 `docs/plan/design/`（a0203c5）。
+- 只有构建时设了 `VITE_EDU_API_BASE` 才生效；不设时和 main 一样。
+
+**验证**
+
+- Mac 第一轮（Codex 任务 f5bf6416，验证 984075b）：
+  - 自动化和构建都通过；
+  - 端到端 1、7–11 通过，2–6 不通过（落点、运营多出「教学」）；
+  - 报告：Mac `~/Documents/Codex/agent-peer-workspace/edu-platform-shell/verification/report.md`。
+- Mac 复测（任务 f170a655，验证 f3c5c0d）结论是**有条件通过**：
+  - 宿主模型配置引导完成后，2–6 全部通过；
+  - 全新客户端数据目录第一次启动时，引导会把部分账号切回「任务」；
+  - 打开已有任务链接的场景没有现成任务，跳过未测；
+  - 报告：`verification-f3c5c0d/report.md`。
+- Mac 上 Go 服务要 `CGO_ENABLED=0` 才能编译。本机 SDK 的 `.tbd` 有 `arm64e.x1` 链接错误，不是代码问题。
+
+**遗留**
+
+- **P2 前必须处理**：凡是打开 edu_platform 的环境，客户端都要设 `setup_guide_enabled: false`。每人容器都是新数据目录，不关的话每个新学员第一次都会落到「任务」。
+- `POST /v1/schools/{id}/members` 一次只能给一个 `role`，接口建不出「教师 + 学校管理员」这样的多角色账号。Mac 测试是直接往库里插的。要补接口，排期待定。
+- 已有任务链接打开时不跳走：未验证。
+
 ## 2026-11-03：SRV-003 课程导入完成，Mac 验证通过；P1 后端完成
 
 **做了什么**
