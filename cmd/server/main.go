@@ -38,7 +38,7 @@ func main() {
 	if config.WorkspaceBroker != "" {
 		workspaces := workspace.New(db, workspace.NewSocketBroker(config.WorkspaceBroker), workspace.Config{
 			FirstPort: config.WorkspaceFirstPort, LastPort: config.WorkspaceLastPort, Limit: config.WorkspaceLimit,
-			Idle: config.WorkspaceIdle, StartTimeout: 3 * time.Minute, Starts: 2,
+			Idle: config.WorkspaceIdle, StartTimeout: 3 * time.Minute,
 		})
 		app.WithWorkspaces(workspaces)
 		go workspaces.Run(ctx)

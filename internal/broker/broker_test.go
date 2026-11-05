@@ -141,7 +141,7 @@ func newBroker(t *testing.T, socket string, port int) *Broker {
 	b, err := New(Config{
 		Image: "edu-agent-jiuwen-client:test", GatewayKey: strings.Repeat("k", 40), CourseContainer: "edu-agent-jiuwen-course-1",
 		OriginHosts: "agent.hrtiger.cn", Subnets: netip.MustParsePrefix("10.231.0.0/16"), FirstPort: port - 5, LastPort: port + 5,
-		Memory: 4 << 30, NanoCPUs: 2e9, Pids: 512, ReadyPath: "/api/v1/auth/status", ReadyTimeout: 5 * time.Second,
+		Memory: 4 << 30, NanoCPUs: 2e9, Pids: 512, ReadyTimeout: 5 * time.Second,
 	}, socket)
 	if err != nil {
 		t.Fatal(err)

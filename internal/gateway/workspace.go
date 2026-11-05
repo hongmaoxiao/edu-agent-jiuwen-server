@@ -13,10 +13,7 @@ import (
 const workspaceCookie = "edu_workspace"
 
 // WithWorkspaces turns on per-account containers; without it POST /v1/workspace answers 503.
-func (s *Server) WithWorkspaces(w *workspace.Service) *Server {
-	s.workspaces = w
-	return s
-}
+func (s *Server) WithWorkspaces(w *workspace.Service) { s.workspaces = w }
 
 func (s *Server) registerWorkspace() {
 	s.route("POST /v1/workspace", s.openWorkspace)

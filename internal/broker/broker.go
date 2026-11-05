@@ -27,7 +27,8 @@ import (
 
 const (
 	owner         = "edu-agent-ws-v1"
-	containerPort = "5173/tcp" // WorkSwarm's web server; it forwards /api and /ws to its own backend
+	containerPort = "5173/tcp"            // WorkSwarm's web server; it forwards /api and /ws to its own backend
+	readyPath     = "/api/v1/auth/status" // polled on the published port until it answers 200
 )
 
 type Config struct {
@@ -41,7 +42,6 @@ type Config struct {
 	Memory          int64 // bytes
 	NanoCPUs        int64
 	Pids            int64
-	ReadyPath       string // polled on the published port until it answers 200
 	ReadyTimeout    time.Duration
 }
 
@@ -226,7 +226,7 @@ func (b *Broker) spec(n names, accountID string, port int) map[string]any {
 func (b *Broker) waitReady(ctx context.Context, n names, port int) error {
 	ctx, cancel := context.WithTimeout(ctx, b.config.ReadyTimeout)
 	defer cancel()
-	url := "http://" + net.JoinHostPort("127.0.0.1", strconv.Itoa(port)) + b.config.ReadyPath
+	url := "http://" + net.JoinHostPort("127.0.0.1", strconv.Itoa(port)) + readyPath
 	for {
 		var info containerInfo
 		if _, err := b.docker.get(ctx, "/containers/"+n.container+"/json", &info); err != nil {

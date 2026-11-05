@@ -30,7 +30,6 @@ type Config struct {
 	Limit               int           // containers starting or running at once; beyond that people wait
 	Idle                time.Duration // stop a container nobody has used for this long
 	StartTimeout        time.Duration // a start still pending after this is treated as failed
-	Starts              int           // containers starting at the same time
 }
 
 type Service struct {
@@ -41,7 +40,7 @@ type Service struct {
 }
 
 func New(db *pgxpool.Pool, broker Broker, config Config) *Service {
-	return &Service{db: db, broker: broker, config: config, starts: make(chan struct{}, max(config.Starts, 1))}
+	return &Service{db: db, broker: broker, config: config, starts: make(chan struct{}, starts)}
 }
 
 // States reported to the browser.
@@ -51,7 +50,8 @@ const (
 	Busy     = "busy" // the limit is reached; ask again later
 )
 
-var ErrUnavailable = errors.New("workspace unavailable")
+// starts bounds containers being created at once, so a burst of sign-ins does not stall Docker.
+const starts = 2
 
 // Open makes sure the account's container is running or starting, and ties a forwarding cookie to the session.
 // It returns a new cookie value when the presented one does not belong to this session.
@@ -112,7 +112,7 @@ func (s *Service) claim(ctx context.Context, accountID string) (string, error) {
 	if active >= s.config.Limit {
 		return Busy, nil
 	}
-	if _, err := tx.Exec(ctx, "UPDATE workspaces SET state='starting',started_at=now(),last_seen_at=now(),updated_at=now() WHERE account_id=$1", accountID); err != nil {
+	if _, err := tx.Exec(ctx, "UPDATE workspaces SET state='starting',last_seen_at=now(),updated_at=now() WHERE account_id=$1", accountID); err != nil {
 		return "", err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -145,9 +145,9 @@ func (s *Service) assignPort(ctx context.Context, accountID string) error {
 		if exists {
 			return nil
 		}
-		return fmt.Errorf("%w: no free workspace port", ErrUnavailable)
+		return errors.New("no free workspace port")
 	}
-	return fmt.Errorf("%w: could not assign a workspace port", ErrUnavailable)
+	return errors.New("could not assign a workspace port")
 }
 
 func (s *Service) start(accountID string, port int) {

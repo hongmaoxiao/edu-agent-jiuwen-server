@@ -62,12 +62,12 @@ func config() (broker.Config, error) {
 		Image: os.Getenv("EDU_BROKER_IMAGE"), GatewayKey: strings.TrimSpace(string(key)),
 		CourseContainer: os.Getenv("EDU_BROKER_COURSE_CONTAINER"),
 		OriginHosts:     env("EDU_BROKER_ORIGIN_HOSTS", "agent.hrtiger.cn,127.0.0.1,localhost"),
-		Subnets:         subnets, ReadyPath: "/api/v1/auth/status", ReadyTimeout: 150 * time.Second,
+		Subnets:         subnets, ReadyTimeout: 150 * time.Second,
 	}
-	if c.FirstPort, err = strconv.Atoi(first); err != nil {
-		return c, errors.New("EDU_WORKSPACE_PORTS must look like 57000-57999")
-	}
-	if c.LastPort, err = strconv.Atoi(last); err != nil {
+	var firstErr, lastErr error
+	c.FirstPort, firstErr = strconv.Atoi(first)
+	c.LastPort, lastErr = strconv.Atoi(last)
+	if firstErr != nil || lastErr != nil {
 		return c, errors.New("EDU_WORKSPACE_PORTS must look like 57000-57999")
 	}
 	memory, err := number("EDU_BROKER_MEMORY_MB", "4096")

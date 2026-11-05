@@ -47,7 +47,7 @@ func (b *fakeBroker) stops(accountID string) int {
 func (h *harness) withWorkspaces(limit int) *fakeBroker {
 	broker := &fakeBroker{ensured: map[string]int{}}
 	h.s.WithWorkspaces(workspace.New(h.db, broker, workspace.Config{
-		FirstPort: 57000, LastPort: 57009, Limit: limit, Idle: time.Hour, StartTimeout: time.Minute, Starts: 2,
+		FirstPort: 57000, LastPort: 57009, Limit: limit, Idle: time.Hour, StartTimeout: time.Minute,
 	}))
 	return broker
 }
