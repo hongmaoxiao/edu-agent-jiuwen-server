@@ -2,6 +2,9 @@ package broker
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"net"
 	"net/http"
@@ -177,13 +180,20 @@ func TestEnsureBuildsAnIsolatedContainerAndStopKeepsTheFiles(t *testing.T) {
 		if strings.Contains(value.(string), "DEEPSEEK") || strings.Contains(value.(string), b.config.GatewayKey) {
 			t.Errorf("no provider key or signing key may reach the container: %v", value)
 		}
-		token, _ = strings.CutPrefix(value.(string), "AGENT_GATEWAY_TOKEN=")
-		if token != value.(string) && token != "" {
-			break
+		if rest, ok := strings.CutPrefix(value.(string), "AGENT_GATEWAY_TOKEN="); ok {
+			token = rest
 		}
 	}
-	if token != b.gatewayToken(account, time.Now()) && !strings.HasPrefix(token, "edp.") {
-		t.Errorf("container must hold its own signed gateway token, got %q", token)
+	// 签名用同一把钥匙核对，载荷里是这个账号：课程网关就按这个人计量。
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 || parts[0] != "edp" {
+		t.Fatalf("container must hold a signed gateway token, got %q", token)
+	}
+	mac := hmac.New(sha256.New, []byte(b.config.GatewayKey))
+	mac.Write([]byte("edp." + parts[1]))
+	claims, _ := base64.RawURLEncoding.DecodeString(parts[1])
+	if parts[2] != base64.RawURLEncoding.EncodeToString(mac.Sum(nil)) || !strings.Contains(string(claims), `"acc":"`+account+`"`) {
+		t.Errorf("gateway token must be signed for this account, got claims %s", claims)
 	}
 
 	if err := b.Ensure(context.Background(), account, port); err != nil {
