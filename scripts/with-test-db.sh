@@ -10,7 +10,7 @@ fi
 port=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')
 if command -v docker >/dev/null 2>&1; then
   name="edu-test-pg-$port"
-  cleanup() { docker rm -f "$name" >/dev/null 2>&1 || true; }
+  cleanup() { docker rm -fv "$name" >/dev/null 2>&1 || true; }
   trap cleanup EXIT
   trap 'exit 130' INT
   trap 'exit 143' TERM

@@ -16,9 +16,13 @@ type fakeBroker struct {
 	mu      sync.Mutex
 	ensured map[string]int
 	stopped []string
+	gate    chan struct{} // when set, starts wait until it is closed
 }
 
 func (b *fakeBroker) Ensure(_ context.Context, accountID string, port int) error {
+	if b.gate != nil {
+		<-b.gate
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.ensured[accountID]++
@@ -75,6 +79,13 @@ func (h *harness) ready(token string) string {
 	if r.code != 200 || r.str("state") != "starting" || r.body["cookie_issued"] != true {
 		h.t.Fatalf("first open: %d %v", r.code, r.body)
 	}
+	return h.waitReady(token, cookie)
+}
+
+// waitReady keeps opening with the cookie until the fake broker's start has been recorded.
+func (h *harness) waitReady(token, cookie string) string {
+	h.t.Helper()
+	var r reply
 	for range 100 {
 		if r, _ = h.open(token, cookie); r.str("state") == "ready" {
 			if r.body["cookie_issued"] != false {
@@ -106,7 +117,8 @@ func (h *harness) accountID(login string) string {
 
 func TestWorkspaceForwardingFollowsTheSession(t *testing.T) {
 	h := newHarness(t)
-	h.withWorkspaces(10)
+	broker := h.withWorkspaces(10)
+	broker.gate = make(chan struct{}) // 容器起好之前先查转发
 	ops := h.mustLogin("ops", "operator-password", "desktop")
 	_, initial := h.teacher(ops, "teacher-a", true)
 	teacher := h.signIn("teacher-a", initial)
@@ -118,7 +130,8 @@ func TestWorkspaceForwardingFollowsTheSession(t *testing.T) {
 	if code, _ := h.upstream(cookie); code != 401 {
 		t.Errorf("no forwarding before the container is ready: %d", code)
 	}
-	cookie = h.ready(teacher)
+	close(broker.gate)
+	cookie = h.waitReady(teacher, cookie)
 	code, upstream := h.upstream(cookie)
 	if code != 204 || !strings.HasPrefix(upstream, "127.0.0.1:570") {
 		t.Fatalf("ready workspace must forward to its loopback port: %d %q", code, upstream)

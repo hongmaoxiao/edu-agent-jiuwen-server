@@ -165,7 +165,7 @@
 
 1. 构建并放进新的 `releases/<提交>`：`bin/edu-agent-server`、`bin/edu-agent-broker`、`bin/edu-agent-migrate`、`bin/edu-agent-admin`（`CGO_ENABLED=0 GOOS=linux GOARCH=amd64`）。
 2. 建用户：`useradd --system --no-create-home --shell /usr/sbin/nologin --gid edu-agent edu-agent-broker`。
-3. 写 `/etc/edu-agent-server/broker.env`（照模板，镜像写客户端这次构建的标签）。新生成一把随机密钥（至少 32 字符，如 `openssl rand -hex 32`），写进 `/etc/edu-agent-server/gateway-key`，同一把加到客户端 `deploy/secrets.env` 的 `AGENT_GATEWAY_PLATFORM_KEY`，重建 course 容器后生效；全程不打印。`server.env` 按 [server.env.example](server.env.example) 加 `EDU_WORKSPACE_*` 和 `EDU_INTERNAL_LISTEN`。
+3. 写 `/etc/edu-agent-server/broker.env`（照模板，镜像写客户端这次构建的标签）。新生成一把随机密钥（至少 32 字符，如 `openssl rand -hex 32`），写进 `/etc/edu-agent-server/gateway-key`，同一把加到客户端 `deploy/secrets.env` 的 `AGENT_GATEWAY_PLATFORM_KEY`，重建 course 容器后生效；全程不打印。`server.env` 按 [server.env.example](server.env.example) 加 `EDU_WORKSPACE_*` 和 `EDU_INTERNAL_LISTEN`。写之前先确认 `EDU_BROKER_SUBNETS` 不和已有网络重叠：`ip -4 route` 和 `docker network inspect $(docker network ls -q) --format '{{.Name}} {{range .IPAM.Config}}{{.Subnet}} {{end}}'` 里都不能有包含或落在 `10.231.0.0/16` 的段（Mac 上就有 `10.0.0.0/8` 撞上过），撞了换一段 /16 并说明。
 4. 迁移（004 教学班、005 容器），再 `edu-agent-admin demo-reset demo` 给已有的演示账号建演示社会班。
 5. 原站点登录页的账号保留为演示账号：用户名和平台演示账号相同（应是 `demo`，不是就先停下来问）；把 Mac `/Users/xhm/project/edu-agent-jiuwen/deploy/access.env` 里的密码经标准输入交给 `edu-agent-admin set-password <用户名>`，不出现在命令行、日志和回复里。
 6. 装 `edu-agent-broker.service`、更新 `edu-agent-server.service`，`systemctl daemon-reload && systemctl enable --now edu-agent-broker && systemctl restart edu-agent-server`。

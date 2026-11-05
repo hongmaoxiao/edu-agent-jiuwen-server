@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -32,7 +33,13 @@ type fakeDocker struct {
 func startFakeDocker(t *testing.T) (*fakeDocker, string) {
 	t.Helper()
 	f := &fakeDocker{containers: map[string]map[string]any{}, running: map[string]bool{}, networks: map[string]map[string]any{}, volumes: map[string]map[string]any{}}
-	socket := filepath.Join(t.TempDir(), "docker.sock")
+	// macOS 的默认临时目录太长，放不下 unix socket 路径（上限约 104 字节）。
+	dir, err := os.MkdirTemp("/tmp", "broker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(dir) })
+	socket := filepath.Join(dir, "docker.sock")
 	listener, err := net.Listen("unix", socket)
 	if err != nil {
 		t.Fatal(err)
