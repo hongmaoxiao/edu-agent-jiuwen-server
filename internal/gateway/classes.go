@@ -68,6 +68,9 @@ func (s *Server) updateAccount(w http.ResponseWriter, r *http.Request) {
 		fail(w, r, err)
 		return
 	}
+	if updated.Status == "disabled" {
+		s.stopWorkspace(r, updated.ID)
+	}
 	writeJSON(w, http.StatusOK, updated)
 }
 
@@ -81,6 +84,7 @@ func (s *Server) resetPassword(w http.ResponseWriter, r *http.Request) {
 		fail(w, r, err)
 		return
 	}
+	s.stopWorkspace(r, r.PathValue("account"))
 	writeJSON(w, http.StatusOK, map[string]string{"initial_password": password})
 }
 

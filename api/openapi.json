@@ -954,6 +954,48 @@
           }
         }
       }
+    },
+    "/v1/workspace": {
+      "post": {
+        "summary": "打开自己的 WorkSwarm 容器：没在运行就启动，同时给这个会话发 agent.hrtiger.cn 上的转发 cookie（edu_workspace，只属于页面所在域名，随会话失效）。页面经自己的域名调用（agent.hrtiger.cn 的 nginx 把 /v1/workspace 转到这里）。启动要几十秒，前端按 state 轮询；同时运行的容器达到上限时返回 busy。演示账号各视角共用一个容器",
+        "tags": [
+          "workspace"
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "starting",
+                        "ready",
+                        "busy"
+                      ]
+                    },
+                    "cookie_issued": {
+                      "type": "boolean",
+                      "description": "这次新发了转发 cookie：页面是在浏览器能进自己的容器之前打开的，容器就绪后要刷新一次"
+                    }
+                  },
+                  "required": [
+                    "state",
+                    "cookie_issued"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
     }
   },
   "components": {

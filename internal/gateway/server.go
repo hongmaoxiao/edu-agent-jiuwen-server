@@ -16,6 +16,7 @@ import (
 
 	"edu-agent-jiuwen-server/internal/account"
 	"edu-agent-jiuwen-server/internal/platform"
+	"edu-agent-jiuwen-server/internal/workspace"
 	"edu-agent-jiuwen-server/migrations"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -28,6 +29,8 @@ type Server struct {
 	patterns []string
 	limits   limiter
 	accounts *account.Service
+	// workspaces is nil until WithWorkspaces: then POST /v1/workspace answers 503.
+	workspaces *workspace.Service
 }
 
 func New(config platform.Config, db *pgxpool.Pool) *Server {
@@ -39,6 +42,7 @@ func New(config platform.Config, db *pgxpool.Pool) *Server {
 	s.registerAuth()
 	s.registerSchools()
 	s.registerClasses()
+	s.registerWorkspace()
 	return s
 }
 
