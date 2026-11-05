@@ -55,6 +55,12 @@ func (f *fakeDocker) serve(w http.ResponseWriter, r *http.Request) {
 	}
 	parts := strings.Split(strings.Trim(path, "/"), "/")
 	switch {
+	case r.Method == "GET" && path == "/networks":
+		var list []map[string]any
+		for name, n := range f.networks {
+			list = append(list, map[string]any{"Name": name, "Labels": n["Labels"]})
+		}
+		reply(200, list)
 	case r.Method == "GET" && parts[0] == "networks":
 		if n, ok := f.networks[parts[1]]; ok {
 			reply(200, n)
@@ -174,6 +180,14 @@ func TestEnsureBuildsAnIsolatedContainerAndStopKeepsTheFiles(t *testing.T) {
 
 	if err := b.Ensure(context.Background(), account, port); err != nil {
 		t.Fatalf("ensuring a running container must succeed: %v", err)
+	}
+	// 课程服务重建后不在账号网络里了：Reconnect 把它接回来。
+	network["Containers"] = map[string]any{}
+	if err := b.Reconnect(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if len(docker.networks[n.network]["Containers"].(map[string]any)) != 1 {
+		t.Error("reconnect must join the course service back to the account network")
 	}
 	if err := b.Stop(context.Background(), account, port); err != nil {
 		t.Fatal(err)

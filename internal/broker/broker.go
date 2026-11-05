@@ -15,6 +15,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"net/url"
 	"regexp"
 	"strconv"
 	"sync"
@@ -271,6 +272,33 @@ func (b *Broker) Stop(ctx context.Context, accountID string, port int) error {
 		}
 	}
 	return b.docker.call(ctx, "DELETE", "/networks/"+n.network, nil, nil, 204, 404)
+}
+
+// Reconnect joins the course service back to every account network that lost it. Recreating the course
+// container (a redeploy) drops its extra networks, and running workspaces would lose the model gateway.
+func (b *Broker) Reconnect(ctx context.Context) error {
+	filter := url.QueryEscape(`{"label":["edu.owner=` + owner + `"]}`)
+	var networks []struct {
+		Name   string
+		Labels map[string]string
+	}
+	if err := b.docker.call(ctx, "GET", "/networks?filters="+filter, nil, &networks, 200); err != nil {
+		return err
+	}
+	for _, listed := range networks {
+		var network networkInfo
+		if found, err := b.docker.get(ctx, "/networks/"+listed.Name, &network); err != nil || !found || network.has(b.config.CourseContainer) {
+			if err != nil {
+				return err
+			}
+			continue
+		}
+		connect := map[string]any{"Container": b.config.CourseContainer, "EndpointConfig": map[string]any{"Aliases": []string{"course"}}}
+		if err := b.docker.call(ctx, "POST", "/networks/"+listed.Name+"/connect", connect, nil, 200); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type containerInfo struct {

@@ -148,6 +148,36 @@
       https://agent-api.hrtiger.cn/readyz
     ```
 
+## P2：每人一个 WorkSwarm 容器（还没上线）
+
+服务端多一个 broker 进程，客户端那边 agent.hrtiger.cn 换成按登录身份转发，步骤见客户端仓库 `deploy/README.md` 的「每人一个容器」。两边要一起上线：先上本节，验证通过再切 agent.hrtiger.cn。
+
+| 用途 | 服务器路径或名称 |
+|---|---|
+| broker | `edu-agent-broker.service`，用户 `edu-agent-broker`、组 `edu-agent`，附加组 `docker` |
+| broker socket | `/run/edu-agent-broker/broker.sock`（0660，服务端 `edu-agent` 同组可连） |
+| broker 配置 | `/etc/edu-agent-server/broker.env`（root 0600），模板 [broker.env.example](broker.env.example) |
+| 模型网关令牌 | `/etc/edu-agent-server/gateway-token`（root 0600），systemd `LoadCredential` 交给 broker |
+| nginx 内部校验 | 服务端 `127.0.0.1:4021`，只给 agent.hrtiger.cn 的 `auth_request` 用，不经 agent-api 站点 |
+| 各人容器 | 名字 `edu-ws-<账号哈希>`，端口 `127.0.0.1:57000–57999` 一人一个，网络在 `10.231.0.0/16` 里各 /28，标签 `edu.owner=edu-agent-ws-v1` |
+
+步骤（root）：
+
+1. 构建并放进新的 `releases/<提交>`：`bin/edu-agent-server`、`bin/edu-agent-broker`、`bin/edu-agent-migrate`、`bin/edu-agent-admin`（`CGO_ENABLED=0 GOOS=linux GOARCH=amd64`）。
+2. 建用户：`useradd --system --no-create-home --shell /usr/sbin/nologin --gid edu-agent edu-agent-broker`。
+3. 写 `/etc/edu-agent-server/broker.env`（照模板，镜像写客户端这次构建的标签）；把客户端 `deploy/secrets.env` 里 `AGENT_GATEWAY_DEMO_TOKEN` 的值写进 `/etc/edu-agent-server/gateway-token`，不打印。`server.env` 按 [server.env.example](server.env.example) 加 `EDU_WORKSPACE_*` 和 `EDU_INTERNAL_LISTEN`。
+4. 迁移（004 教学班、005 容器），再 `edu-agent-admin demo-reset demo` 给已有的演示账号建演示社会班。
+5. 原站点登录页的账号保留为演示账号：用户名和平台演示账号相同（应是 `demo`，不是就先停下来问）；把 Mac `/Users/xhm/project/edu-agent-jiuwen/deploy/access.env` 里的密码经标准输入交给 `edu-agent-admin set-password <用户名>`，不出现在命令行、日志和回复里。
+6. 装 `edu-agent-broker.service`、更新 `edu-agent-server.service`，`systemctl daemon-reload && systemctl enable --now edu-agent-broker && systemctl restart edu-agent-server`。
+7. 检查：`/readyz` 200；socket 存在且属组 `edu-agent`；`ss -ltn` 里 4021 只在 127.0.0.1；agent-api 站点访问 `/internal/workspace/auth` 是 404。
+
+运行中要知道的：
+
+- 课程服务容器重建后会从各人网络里掉出去，broker 每 30 秒把它接回来。
+- 容器被系统杀掉（如内存不够）时，数据库里还记着「就绪」，这个人会看到连不上，要等闲置回收（默认 30 分钟）或运营停用再启用账号。这一条还没自动处理。
+- 所有容器暂时共用同一个模型网关令牌，用量记在 `browser-demo` 名下，按人分开计量还没做。
+- 回滚：停 `edu-agent-broker`，`server.env` 去掉 `EDU_WORKSPACE_BROKER` 后重启服务端，再按客户端仓库的步骤换回旧的 agent.conf。各人容器用 `docker ps -aq --filter label=edu.owner=edu-agent-ws-v1` 找到后删掉，卷保留。
+
 ## 回滚
 
 首次上线前没有旧版 Go 服务。若需撤销这次新增服务，停用 `edu-agent-server.service` 和 API 续期 timer，把 **仅有的新文件** `/etc/nginx/conf.d/agent-api.conf` 移到 root 私有快照目录外的停用文件，`nginx -t` 通过后 reload。需要时用此 Compose 文件的 `stop postgres` 停止新数据库；保留容器、卷、密码、证书、发布目录和全部数据，不执行 `down -v` 或删除卷。旧站点无需替换配置或重启容器。

@@ -118,6 +118,20 @@ func main() {
 		defer done()
 		server.Shutdown(shutdown)
 	}()
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if err := b.Reconnect(ctx); err != nil {
+					slog.Error("course reconnect failed", "service", "edu-agent-broker", "reason", err.Error())
+				}
+			}
+		}
+	}()
 	slog.Info("listening", "service", "edu-agent-broker", "socket", socket)
 	if err := server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		slog.Error("broker stopped", "service", "edu-agent-broker", "reason", err.Error())

@@ -1,6 +1,6 @@
 [Unit]
 Description=edu-agent-jiuwen Go API
-After=network-online.target docker.service
+After=network-online.target docker.service edu-agent-broker.service
 Wants=network-online.target
 Requires=docker.service
 StartLimitIntervalSec=0
@@ -27,6 +27,8 @@ RestrictSUIDSGID=true
 LockPersonality=true
 CapabilityBoundingSet=
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+# 连 broker 的 socket；前缀 - 表示 broker 还没起来时目录可以不存在。
+ReadWritePaths=-/run/edu-agent-broker
 
 [Install]
 WantedBy=multi-user.target

@@ -1,0 +1,38 @@
+[Unit]
+Description=edu-agent-jiuwen workspace broker (per-account WorkSwarm containers)
+After=docker.service
+Requires=docker.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+# 只有 broker 能操作 Docker；服务端 edu-agent 只能连它的 socket（同组、0660）。
+User=edu-agent-broker
+Group=edu-agent
+SupplementaryGroups=docker
+EnvironmentFile=/etc/edu-agent-server/broker.env
+# 模型网关令牌由 systemd 交给本服务，私有配置目录保持 root 0700。
+LoadCredential=gateway-token:/etc/edu-agent-server/gateway-token
+Environment=EDU_BROKER_GATEWAY_TOKEN_FILE=%d/gateway-token
+Environment=EDU_BROKER_SOCKET=/run/edu-agent-broker/broker.sock
+RuntimeDirectory=edu-agent-broker
+RuntimeDirectoryMode=0750
+ExecStart=/var/www/edu-agent-jiuwen-server/current/bin/edu-agent-broker
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=20s
+UMask=0007
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target
