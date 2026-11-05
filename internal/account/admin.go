@@ -20,6 +20,7 @@ type AccountView struct {
 	DisplayName        string `json:"display_name"`
 	IsOperator         bool   `json:"is_operator"`
 	CanCreateCourses   bool   `json:"can_create_courses"`
+	CanOpenClasses     bool   `json:"can_open_classes"`
 	IsDemo             bool   `json:"is_demo"`
 	MustChangePassword bool   `json:"must_change_password"`
 	Status             string `json:"status"`
@@ -43,19 +44,29 @@ type DemoView struct {
 type Me struct {
 	Account AccountView  `json:"account"`
 	Schools []SchoolView `json:"schools"`
+	Classes []ClassView  `json:"classes"` // classes the caller teaches or learns in, with their role
 	Demo    *DemoView    `json:"demo,omitempty"`
 }
 
-const accountColumns = "id,login,display_name,is_operator,can_create_courses,is_demo,must_change_password,status"
+const (
+	accountColumns = "id,login,display_name,is_operator,can_create_courses,can_open_classes,is_demo,must_change_password,status"
+	// memberColumns is accountColumns for queries that join accounts as a.
+	memberColumns = "a.id,a.login,a.display_name,a.is_operator,a.can_create_courses,a.can_open_classes,a.is_demo,a.must_change_password,a.status"
+)
+
+// accountFields are the scan targets for accountColumns, in the same order.
+func accountFields(a *AccountView) []any {
+	return []any{&a.ID, &a.Login, &a.DisplayName, &a.IsOperator, &a.CanCreateCourses, &a.CanOpenClasses, &a.IsDemo, &a.MustChangePassword, &a.Status}
+}
 
 func scanAccount(row pgx.Row) (AccountView, error) {
 	var a AccountView
-	err := row.Scan(&a.ID, &a.Login, &a.DisplayName, &a.IsOperator, &a.CanCreateCourses, &a.IsDemo, &a.MustChangePassword, &a.Status)
+	err := row.Scan(accountFields(&a)...)
 	return a, err
 }
 
 func (s *Service) Me(ctx context.Context, p Principal) (Me, error) {
-	account, err := scanAccount(s.db.QueryRow(ctx, "SELECT "+accountColumns+" FROM accounts WHERE id=$1", p.AccountID))
+	account, err := s.account(ctx, p.AccountID)
 	if err != nil {
 		return Me{}, err
 	}
@@ -69,6 +80,10 @@ func (s *Service) Me(ctx context.Context, p Principal) (Me, error) {
 	}
 	me := Me{Account: account, Schools: []SchoolView{}}
 	if me.Demo, err = s.demoView(ctx, p); err != nil {
+		return me, err
+	}
+	// Operators see every class on the management pages; here only their own memberships count.
+	if me.Classes, err = s.Classes(ctx, Roles{AccountID: p.AccountID}); err != nil {
 		return me, err
 	}
 	rows, err := s.db.Query(ctx, "SELECT id,name,city,is_demo FROM schools WHERE id IN (SELECT school_id FROM school_members WHERE account_id=$1) ORDER BY name", p.AccountID)
@@ -165,7 +180,6 @@ func (s *Service) school(ctx context.Context, actor Roles, schoolID string) (str
 	return owner, err
 }
 
-// CreateMember opens a new account inside a school. The initial password is returned once and must be changed at first sign-in.
 // CreateMember opens an account with one or more roles in a school, e.g. a teacher who is also the school admin.
 func (s *Service) CreateMember(ctx context.Context, actor Roles, schoolID, login, displayName string, roles []string) (Member, string, error) {
 	slices.Sort(roles)
@@ -187,30 +201,14 @@ func (s *Service) CreateMember(ctx context.Context, actor Roles, schoolID, login
 			return Member{}, "", ErrForbidden
 		}
 	}
-	normalized, err := NormalizeLogin(login)
-	if err != nil {
-		return Member{}, "", err
-	}
-	name, err := validName(displayName, 64)
-	if err != nil {
-		return Member{}, "", err
-	}
-	password := InitialPassword()
-	hash, err := HashPassword(password)
-	if err != nil {
-		return Member{}, "", err
-	}
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return Member{}, "", err
 	}
 	defer tx.Rollback(ctx)
-	id := platform.ID("acc")
 	// 在演示学校里开的账号也归这个演示所有：同样看不到真实数据，重置时一起删掉。
-	if _, err := tx.Exec(ctx, "INSERT INTO accounts(id,login,display_name,password_hash,is_demo,demo_account_id) VALUES($1,$2,$3,$4,$5,NULLIF($6,''))", id, normalized, name, hash, owner != "", owner); err != nil {
-		if isUniqueViolation(err) {
-			return Member{}, "", fmt.Errorf("%w: 登录名已被使用", ErrConflict)
-		}
+	id, password, err := insertAccount(ctx, tx, login, displayName, owner)
+	if err != nil {
 		return Member{}, "", err
 	}
 	if _, err := tx.Exec(ctx, "INSERT INTO school_members(school_id,account_id,role) SELECT $1,$2,unnest($3::text[])", schoolID, id, roles); err != nil {
@@ -222,7 +220,7 @@ func (s *Service) CreateMember(ctx context.Context, actor Roles, schoolID, login
 	if err := tx.Commit(ctx); err != nil {
 		return Member{}, "", err
 	}
-	account, err := scanAccount(s.db.QueryRow(ctx, "SELECT "+accountColumns+" FROM accounts WHERE id=$1", id))
+	account, err := s.account(ctx, id)
 	return Member{Account: account, Roles: roles}, password, err
 }
 
@@ -233,22 +231,16 @@ func (s *Service) Members(ctx context.Context, actor Roles, schoolID string) ([]
 	if !actor.ManagesSchool(schoolID) {
 		return nil, ErrForbidden
 	}
-	rows, err := s.db.Query(ctx, `SELECT a.id,a.login,a.display_name,a.is_operator,a.can_create_courses,a.is_demo,a.must_change_password,a.status,array_agg(m.role ORDER BY m.role)
+	rows, err := s.db.Query(ctx, `SELECT `+memberColumns+`,array_agg(m.role ORDER BY m.role)
 		FROM school_members m JOIN accounts a ON a.id=m.account_id WHERE m.school_id=$1 GROUP BY a.id ORDER BY a.login`, schoolID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	result := []Member{}
-	for rows.Next() {
+	return collect(rows, func(row pgx.Row) (Member, error) {
 		var m Member
-		a := &m.Account
-		if err := rows.Scan(&a.ID, &a.Login, &a.DisplayName, &a.IsOperator, &a.CanCreateCourses, &a.IsDemo, &a.MustChangePassword, &a.Status, &m.Roles); err != nil {
-			return nil, err
-		}
-		result = append(result, m)
-	}
-	return result, rows.Err()
+		err := row.Scan(append(accountFields(&m.Account), &m.Roles)...)
+		return m, err
+	})
 }
 
 // CreateOperator is for cmd/admin: the first operator chooses their own password, so no forced change.
@@ -275,5 +267,40 @@ func (s *Service) CreateOperator(ctx context.Context, login, displayName, passwo
 		}
 		return AccountView{}, err
 	}
-	return scanAccount(s.db.QueryRow(ctx, "SELECT "+accountColumns+" FROM accounts WHERE id=$1", id))
+	return s.account(ctx, id)
+}
+
+// SetPassword is for cmd/admin: the operator chose this password, so no forced change; every session of the account ends.
+func (s *Service) SetPassword(ctx context.Context, login, password string) error {
+	normalized, err := NormalizeLogin(login)
+	if err != nil {
+		return err
+	}
+	if err := ValidPassword(password); err != nil {
+		return err
+	}
+	hash, err := HashPassword(password)
+	if err != nil {
+		return err
+	}
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	var id string
+	err = tx.QueryRow(ctx, "UPDATE accounts SET password_hash=$2,must_change_password=false,password_changed_at=now(),updated_at=now() WHERE login=$1 AND password_hash<>'!' RETURNING id", normalized, hash).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, "UPDATE sessions SET revoked_at=now() WHERE account_id=$1 AND revoked_at IS NULL", id); err != nil {
+		return err
+	}
+	if err := audit(ctx, tx, Roles{AccountID: id}, "account.password_set_by_admin", id); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }

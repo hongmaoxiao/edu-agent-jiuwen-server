@@ -2,6 +2,7 @@
 //
 //	admin create-operator <login> <display name>   # password is read from standard input, never from arguments
 //	admin create-demo <login> <display name>       # demo account, its demo school and three personas; password on standard input
+//	admin set-password <login>                     # replace an account's password (standard input) and end its sessions
 //	admin demo-reset <login>                       # remove everything opened during demos, keep the school and personas
 //	admin import-content <file>                    # import courses, labs, guides and rubrics (seed/fde-content.json); safe to rerun
 package main
@@ -29,7 +30,7 @@ func main() {
 }
 
 func run(args []string) error {
-	usage := fmt.Errorf("usage: admin create-operator|create-demo <login> <display name>  (password on standard input)\n       admin demo-reset <login>\n       admin import-content <file>")
+	usage := fmt.Errorf("usage: admin create-operator|create-demo <login> <display name>  (password on standard input)\n       admin set-password <login>  (password on standard input)\n       admin demo-reset <login>\n       admin import-content <file>")
 	if len(args) == 0 {
 		return usage
 	}
@@ -48,11 +49,18 @@ func run(args []string) error {
 		}
 		return account.New(db), db.Close, nil
 	}
-	switch {
-	case (args[0] == "create-operator" || args[0] == "create-demo") && len(args) == 3:
+	readPassword := func() (string, error) {
 		password, err := bufio.NewReader(os.Stdin).ReadString('\n')
 		if err != nil && password == "" {
-			return fmt.Errorf("read password from standard input: %w", err)
+			return "", fmt.Errorf("read password from standard input: %w", err)
+		}
+		return strings.TrimRight(password, "\r\n"), nil
+	}
+	switch {
+	case (args[0] == "create-operator" || args[0] == "create-demo") && len(args) == 3:
+		password, err := readPassword()
+		if err != nil {
+			return err
 		}
 		accounts, done, err := open()
 		if err != nil {
@@ -63,11 +71,25 @@ func run(args []string) error {
 		if args[0] == "create-demo" {
 			create = accounts.CreateDemo
 		}
-		created, err := create(ctx, args[1], args[2], strings.TrimRight(password, "\r\n"))
+		created, err := create(ctx, args[1], args[2], password)
 		if err != nil {
 			return err
 		}
 		fmt.Printf("%s: %s created (%s)\n", args[0], created.Login, created.ID)
+	case args[0] == "set-password" && len(args) == 2:
+		password, err := readPassword()
+		if err != nil {
+			return err
+		}
+		accounts, done, err := open()
+		if err != nil {
+			return err
+		}
+		defer done()
+		if err := accounts.SetPassword(ctx, args[1], password); err != nil {
+			return err
+		}
+		fmt.Printf("set-password: %s updated, its sessions ended\n", args[1])
 	case args[0] == "demo-reset" && len(args) == 2:
 		accounts, done, err := open()
 		if err != nil {

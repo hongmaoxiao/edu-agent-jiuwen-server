@@ -38,6 +38,7 @@ func New(config platform.Config, db *pgxpool.Pool) *Server {
 	s.route("GET /readyz", s.ready)
 	s.registerAuth()
 	s.registerSchools()
+	s.registerClasses()
 	return s
 }
 

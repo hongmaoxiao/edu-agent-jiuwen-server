@@ -1,7 +1,7 @@
 {
   "project": "edu-agent-jiuwen-server",
-  "current_phase": "P1",
-  "last_updated": "2026-11-04",
+  "current_phase": "P2",
+  "last_updated": "2026-11-05",
   "features": [
     {
       "id": "SRV-001",
@@ -51,6 +51,20 @@
       "acceptance": "Mac 浏览器端到端：五类账号首次进入一次落对页面，入口按角色显示，普通账号无切换器；演示账号三视角切换不刷新、旧令牌 401；会话刷新与双标签页保持登录；二级栏 1440 停靠、1100×720 浮层；关闭开关与 main 一致",
       "evidence": [
         "2026-11-04 Mac 三轮：984075b 不通过（落点、运营多出教学）→ f3c5c0d 有条件通过（首次启动的模型引导抢落点）→ 客户端 ee49f7e + 后端 fef996b 全部通过（Codex 任务 8c49d97d：连库 19 PASS 0 SKIP；全新数据目录五账号首次落点一次通过、无引导；多角色账号、深链接通过）。报告 Mac ~/Documents/Codex/agent-peer-workspace/edu-platform-shell/verification-ee49f7e/report.md"
+      ]
+    },
+    {
+      "id": "SRV-004",
+      "title": "P2-A 账号层级：运营开教师、教师开社会班和学员",
+      "status": "in_progress",
+      "scope": "accounts.can_open_classes；teaching_spaces、teaching_space_members（这一版只有社会班）；/v1/accounts（运营开、列、改权限与停用）、/v1/accounts/{id}/password（运营重置非运营账号，老师重置本班学员）、/v1/classes（开班、列班、成员、批量开学员 1–200 个全成或全不建、移出学员）；/v1/me 带 classes；演示账号带演示社会班，demo-reset 恢复；cmd/admin set-password",
+      "depends_on": [
+        "SRV-001",
+        "SRV-002"
+      ],
+      "acceptance": "Mac 上 make check 通过（含 classes_test.go 6 个连库用例）；curl 冒烟：运营开教师（可开班）→ 教师首次登录改密 → 开班 → 批量开 2 个学员 → 学员登录改密后 /v1/me 有该班 → 教师重置学员密码后学员旧会话 401 → 运营停用教师后其会话 401",
+      "evidence": [
+        "2026-11-05 Grok 本地 PostgreSQL 18.0（嵌入式二进制）：go vet 通过、gofmt 无输出，internal/gateway 20 个用例 PASS（新增 6 个），content、platform 通过；把 manageClass 的权限判断改成恒放行后 3 处断言失败，测试能抓到越权。尚未在 Mac 上验证。"
       ]
     }
   ]

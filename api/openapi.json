@@ -521,6 +521,439 @@
           }
         }
       }
+    },
+    "/v1/accounts": {
+      "get": {
+        "summary": "全部账号（仅运营；演示运营只看到本演示的账号）",
+        "tags": [
+          "classes"
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "accounts": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Account"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "summary": "开不属于学校的账号（仅运营），一般是社会班老师。初始密码只在本次响应里出现",
+        "tags": [
+          "classes"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "login": {
+                    "type": "string"
+                  },
+                  "display_name": {
+                    "type": "string"
+                  },
+                  "can_open_classes": {
+                    "type": "boolean"
+                  },
+                  "can_create_courses": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "login",
+                  "display_name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "已创建",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "account": {
+                      "$ref": "#/components/schemas/Account"
+                    },
+                    "initial_password": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/accounts/{account}": {
+      "parameters": [
+        {
+          "name": "account",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "patch": {
+        "summary": "改开班、建课权限，或停用、启用账号（仅运营）。停用会结束该账号的全部会话",
+        "tags": [
+          "classes"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "can_open_classes": {
+                    "type": "boolean"
+                  },
+                  "can_create_courses": {
+                    "type": "boolean"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "disabled"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Account"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/accounts/{account}/password": {
+      "parameters": [
+        {
+          "name": "account",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "summary": "重置密码：运营可重置非运营账号，老师只能重置自己班里的学员。生成新的初始密码，结束该账号的全部会话，下次登录必须改密码",
+        "tags": [
+          "classes"
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "initial_password": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/classes": {
+      "get": {
+        "summary": "教学班列表：运营看到全部社会班，其他人只看到自己任教或在读的班",
+        "tags": [
+          "classes"
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "classes": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Class"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "summary": "开社会班。有开班权限的老师给自己开；运营开班要指定任教老师",
+        "tags": [
+          "classes"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "teacher_id": {
+                    "type": "string",
+                    "description": "运营必填；老师不填或填自己"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "已创建",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Class"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/classes/{class}/members": {
+      "parameters": [
+        {
+          "name": "class",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "summary": "班级成员（运营、本班老师）",
+        "tags": [
+          "classes"
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "members": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ClassMember"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/classes/{class}/students": {
+      "parameters": [
+        {
+          "name": "class",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "summary": "在班里批量开学员账号（运营、本班老师），一次 1–200 个，全部成功或全部不建。初始密码只在本次响应里出现",
+        "tags": [
+          "classes"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "students": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 200,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "login": {
+                          "type": "string"
+                        },
+                        "display_name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "login",
+                        "display_name"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "students"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "已创建",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "students": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "member": {
+                            "$ref": "#/components/schemas/ClassMember"
+                          },
+                          "initial_password": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "member",
+                          "initial_password"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/classes/{class}/students/{account}": {
+      "parameters": [
+        {
+          "name": "class",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "account",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "delete": {
+        "summary": "把学员移出班级（运营、本班老师）。账号保留，停用账号归运营",
+        "tags": [
+          "classes"
+        ],
+        "responses": {
+          "204": {
+            "description": "已移出"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -629,6 +1062,10 @@
               "active",
               "disabled"
             ]
+          },
+          "can_open_classes": {
+            "type": "boolean",
+            "description": "能开社会班，由运营授权"
           }
         },
         "required": [
@@ -637,6 +1074,7 @@
           "display_name",
           "is_operator",
           "can_create_courses",
+          "can_open_classes",
           "is_demo",
           "must_change_password",
           "status"
@@ -711,11 +1149,19 @@
           },
           "demo": {
             "$ref": "#/components/schemas/DemoView"
+          },
+          "classes": {
+            "type": "array",
+            "description": "自己任教或在读的教学班",
+            "items": {
+              "$ref": "#/components/schemas/Class"
+            }
           }
         },
         "required": [
           "account",
-          "schools"
+          "schools",
+          "classes"
         ]
       },
       "DemoView": {
@@ -751,6 +1197,58 @@
           "perspective",
           "perspectives",
           "display_name"
+        ]
+      },
+      "Class": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "is_demo": {
+            "type": "boolean"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "teacher",
+              "student"
+            ],
+            "description": "调用者在班里的身份；运营查看不在其中的班时没有"
+          },
+          "students": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "is_demo",
+          "students"
+        ]
+      },
+      "ClassMember": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/Account"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "teacher",
+              "student"
+            ]
+          }
+        },
+        "required": [
+          "account",
+          "role"
         ]
       }
     }

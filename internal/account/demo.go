@@ -100,10 +100,13 @@ func (s *Service) CreateDemo(ctx context.Context, login, displayName, password s
 	if err := createPersonas(ctx, tx, id, normalized, school); err != nil {
 		return AccountView{}, err
 	}
+	if err := demoClass(ctx, tx, id, normalized); err != nil {
+		return AccountView{}, err
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return AccountView{}, err
 	}
-	return scanAccount(s.db.QueryRow(ctx, "SELECT "+accountColumns+" FROM accounts WHERE id=$1", id))
+	return s.account(ctx, id)
 }
 
 func createPersonas(ctx context.Context, tx pgx.Tx, demo, login, school string) error {
@@ -114,8 +117,8 @@ func createPersonas(ctx context.Context, tx pgx.Tx, demo, login, school string) 
 	}
 	for _, p := range personas {
 		id := platform.ID("acc")
-		if _, err := tx.Exec(ctx, `INSERT INTO accounts(id,login,display_name,password_hash,must_change_password,is_demo,demo_account_id,is_operator,can_create_courses)
-			VALUES($1,$2,$3,'!',false,true,$4,$5,$6)`, id, limit(login, 50)+"."+p.perspective, p.name, demo, p.perspective == "operator", p.perspective != "student"); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO accounts(id,login,display_name,password_hash,must_change_password,is_demo,demo_account_id,is_operator,can_create_courses,can_open_classes)
+			VALUES($1,$2,$3,'!',false,true,$4,$5,$6,$7)`, id, limit(login, 50)+"."+p.perspective, p.name, demo, p.perspective == "operator", p.perspective != "student", p.perspective == "teacher"); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, "INSERT INTO demo_personas(demo_account_id,perspective,persona_account_id) VALUES($1,$2,$3)", demo, p.perspective, id); err != nil {
@@ -156,6 +159,7 @@ func (s *Service) ResetDemo(ctx context.Context, login string) error {
 	}{
 		{"DELETE FROM accounts WHERE demo_account_id=$1 AND id NOT IN (SELECT persona_account_id FROM demo_personas WHERE demo_account_id=$1)", []any{demo}},
 		{"DELETE FROM schools WHERE demo_account_id=$1 AND id<>$2", []any{demo, school}},
+		{"DELETE FROM teaching_spaces WHERE demo_account_id=$1 AND id IS DISTINCT FROM (SELECT class_id FROM demo_setups WHERE account_id=$1)", []any{demo}},
 		{"DELETE FROM school_members WHERE school_id=$1", []any{school}},
 		{`INSERT INTO school_members(school_id,account_id,role)
 			SELECT $1,persona_account_id,perspective FROM demo_personas WHERE demo_account_id=$2 AND perspective IN ('teacher','student')`, []any{school, demo}},
@@ -165,8 +169,53 @@ func (s *Service) ResetDemo(ctx context.Context, login string) error {
 			return err
 		}
 	}
+	if err := demoClass(ctx, tx, demo, normalized); err != nil {
+		return err
+	}
 	if err := audit(ctx, tx, Roles{AccountID: demo}, "demo.reset", school); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)
+}
+
+// demoStudents are data in the demo social class, not perspectives; like the personas they cannot sign in.
+var demoStudents = []string{"社会学员 甲", "社会学员 乙", "社会学员 丙"}
+
+// demoClass sets up the demo social class: the demo teacher teaches it; the demo student and three demo social
+// students learn in it. Reset calls it again after deleting what was opened during demos, and demos created
+// before classes existed get their class the same way.
+func demoClass(ctx context.Context, tx pgx.Tx, demo, login string) error {
+	var class *string
+	if err := tx.QueryRow(ctx, "SELECT class_id FROM demo_setups WHERE account_id=$1", demo).Scan(&class); err != nil {
+		return err
+	}
+	if class == nil {
+		id := platform.ID("cls")
+		class = &id
+		if _, err := tx.Exec(ctx, `INSERT INTO teaching_spaces(id,name,opened_by,demo_account_id)
+			VALUES($1,'演示社会班',(SELECT persona_account_id FROM demo_personas WHERE demo_account_id=$2 AND perspective='teacher'),$2)`, id, demo); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, "UPDATE demo_setups SET class_id=$1 WHERE account_id=$2", id, demo); err != nil {
+			return err
+		}
+	}
+	if _, err := tx.Exec(ctx, "DELETE FROM teaching_space_members WHERE space_id=$1", *class); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO teaching_space_members(space_id,account_id,role)
+		SELECT $1,persona_account_id,perspective FROM demo_personas WHERE demo_account_id=$2 AND perspective IN ('teacher','student')`, *class, demo); err != nil {
+		return err
+	}
+	for i, name := range demoStudents {
+		id := platform.ID("acc")
+		if _, err := tx.Exec(ctx, `INSERT INTO accounts(id,login,display_name,password_hash,must_change_password,is_demo,demo_account_id)
+			VALUES($1,$2,$3,'!',false,true,$4)`, id, fmt.Sprintf("%s.s%d", limit(login, 50), i+1), name, demo); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, "INSERT INTO teaching_space_members(space_id,account_id,role) VALUES($1,$2,'student')", *class, id); err != nil {
+			return err
+		}
+	}
+	return nil
 }
