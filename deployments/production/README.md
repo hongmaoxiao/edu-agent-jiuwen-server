@@ -157,7 +157,7 @@
 | broker | `edu-agent-broker.service`，用户 `edu-agent-broker`、组 `edu-agent`，附加组 `docker` |
 | broker socket | `/run/edu-agent-broker/broker.sock`（0660，服务端 `edu-agent` 同组可连） |
 | broker 配置 | `/etc/edu-agent-server/broker.env`（root 0600），模板 [broker.env.example](broker.env.example) |
-| 模型网关令牌 | `/etc/edu-agent-server/gateway-token`（root 0600），systemd `LoadCredential` 交给 broker |
+| 模型网关签名密钥 | `/etc/edu-agent-server/gateway-key`（root 0600），systemd `LoadCredential` 交给 broker；课程服务的 `AGENT_GATEWAY_PLATFORM_KEY` 是同一把 |
 | nginx 内部校验 | 服务端 `127.0.0.1:4021`，只给 agent.hrtiger.cn 的 `auth_request` 用，不经 agent-api 站点 |
 | 各人容器 | 名字 `edu-ws-<账号哈希>`，端口 `127.0.0.1:57000–57999` 一人一个，网络在 `10.231.0.0/16` 里各 /28，标签 `edu.owner=edu-agent-ws-v1` |
 
@@ -165,7 +165,7 @@
 
 1. 构建并放进新的 `releases/<提交>`：`bin/edu-agent-server`、`bin/edu-agent-broker`、`bin/edu-agent-migrate`、`bin/edu-agent-admin`（`CGO_ENABLED=0 GOOS=linux GOARCH=amd64`）。
 2. 建用户：`useradd --system --no-create-home --shell /usr/sbin/nologin --gid edu-agent edu-agent-broker`。
-3. 写 `/etc/edu-agent-server/broker.env`（照模板，镜像写客户端这次构建的标签）；把客户端 `deploy/secrets.env` 里 `AGENT_GATEWAY_DEMO_TOKEN` 的值写进 `/etc/edu-agent-server/gateway-token`，不打印。`server.env` 按 [server.env.example](server.env.example) 加 `EDU_WORKSPACE_*` 和 `EDU_INTERNAL_LISTEN`。
+3. 写 `/etc/edu-agent-server/broker.env`（照模板，镜像写客户端这次构建的标签）。新生成一把随机密钥（至少 32 字符，如 `openssl rand -hex 32`），写进 `/etc/edu-agent-server/gateway-key`，同一把加到客户端 `deploy/secrets.env` 的 `AGENT_GATEWAY_PLATFORM_KEY`，重建 course 容器后生效；全程不打印。`server.env` 按 [server.env.example](server.env.example) 加 `EDU_WORKSPACE_*` 和 `EDU_INTERNAL_LISTEN`。
 4. 迁移（004 教学班、005 容器），再 `edu-agent-admin demo-reset demo` 给已有的演示账号建演示社会班。
 5. 原站点登录页的账号保留为演示账号：用户名和平台演示账号相同（应是 `demo`，不是就先停下来问）；把 Mac `/Users/xhm/project/edu-agent-jiuwen/deploy/access.env` 里的密码经标准输入交给 `edu-agent-admin set-password <用户名>`，不出现在命令行、日志和回复里。
 6. 装 `edu-agent-broker.service`、更新 `edu-agent-server.service`，`systemctl daemon-reload && systemctl enable --now edu-agent-broker && systemctl restart edu-agent-server`。
@@ -175,7 +175,7 @@
 
 - 课程服务容器重建后会从各人网络里掉出去，broker 每 30 秒把它接回来。
 - 容器被系统杀掉（如内存不够）时，数据库里还记着「就绪」，这个人会看到连不上，要等闲置回收（默认 30 分钟）或运营停用再启用账号。这一条还没自动处理。
-- 所有容器暂时共用同一个模型网关令牌，用量记在 `browser-demo` 名下，按人分开计量还没做。
+- broker 给每个容器签一张只属于这个账号的模型网关令牌（30 天有效，容器每次启动重签）；课程网关按 `edu:<账号 id>` 分开计量和限额。换密钥后已在运行的容器要停掉重开。
 - 回滚：停 `edu-agent-broker`，`server.env` 去掉 `EDU_WORKSPACE_BROKER` 后重启服务端，再按客户端仓库的步骤换回旧的 agent.conf。各人容器用 `docker ps -aq --filter label=edu.owner=edu-agent-ws-v1` 找到后删掉，卷保留。
 
 ## 回滚

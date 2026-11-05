@@ -11,9 +11,9 @@ User=edu-agent-broker
 Group=edu-agent
 SupplementaryGroups=docker
 EnvironmentFile=/etc/edu-agent-server/broker.env
-# 模型网关令牌由 systemd 交给本服务，私有配置目录保持 root 0700。
-LoadCredential=gateway-token:/etc/edu-agent-server/gateway-token
-Environment=EDU_BROKER_GATEWAY_TOKEN_FILE=%d/gateway-token
+# 给各人容器签模型网关令牌的密钥由 systemd 交给本服务，私有配置目录保持 root 0700。
+LoadCredential=gateway-key:/etc/edu-agent-server/gateway-key
+Environment=EDU_BROKER_GATEWAY_KEY_FILE=%d/gateway-key
 Environment=EDU_BROKER_SOCKET=/run/edu-agent-broker/broker.sock
 RuntimeDirectory=edu-agent-broker
 RuntimeDirectoryMode=0750

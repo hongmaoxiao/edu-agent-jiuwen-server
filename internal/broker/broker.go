@@ -7,9 +7,12 @@ package broker
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -29,7 +32,7 @@ const (
 
 type Config struct {
 	Image           string       // the client image, as deploy/compose.yml builds it
-	GatewayToken    string       // model gateway token written into each container (shared until per-account tokens)
+	GatewayKey      string       // signs each container's model gateway token; the course service holds the same key
 	CourseContainer string       // joined to every account network under the alias course
 	OriginHosts     string       // JIUWENSWARM_WS_ALLOWED_ORIGIN_HOSTS
 	Subnets         netip.Prefix // carved into one /28 per port, never Docker's default pools, which 智教云 also draws from
@@ -50,8 +53,8 @@ type Broker struct {
 }
 
 func New(config Config, dockerSocket string) (*Broker, error) {
-	if config.Image == "" || config.CourseContainer == "" || len(config.GatewayToken) < 32 {
-		return nil, errors.New("image, course container and a gateway token of at least 32 characters are required")
+	if config.Image == "" || config.CourseContainer == "" || len(config.GatewayKey) < 32 {
+		return nil, errors.New("image, course container and a gateway key of at least 32 characters are required")
 	}
 	if !config.Subnets.Addr().Is4() || config.Subnets.Bits() > 28 || config.FirstPort < 1024 || config.LastPort > 65535 || config.FirstPort > config.LastPort {
 		return nil, errors.New("invalid subnet or port range")
@@ -125,7 +128,7 @@ func (b *Broker) Ensure(ctx context.Context, accountID string, port int) error {
 		return fmt.Errorf("container %s is not ours", n.container)
 	}
 	if !found {
-		if err := b.docker.call(ctx, "POST", "/containers/create?name="+n.container, b.spec(n, port), nil, 201); err != nil {
+		if err := b.docker.call(ctx, "POST", "/containers/create?name="+n.container, b.spec(n, accountID, port), nil, 201); err != nil {
 			return err
 		}
 	}
@@ -177,14 +180,28 @@ func (b *Broker) ensureVolume(ctx context.Context, n names, port int) error {
 	return b.docker.call(ctx, "POST", "/volumes/create", map[string]any{"Name": n.volume, "Labels": b.labels(n, port)}, nil, 201)
 }
 
-// spec mirrors the client service in deploy/compose.yml of the client repository: no secrets but the gateway token,
-// read-only root, no capabilities, memory and process limits.
-func (b *Broker) spec(n names, port int) map[string]any {
+// TokenLifetime bounds a container's gateway token. Containers are recreated on every start, so the token
+// only has to outlive one run; the gateway is reachable only from the account and compose networks.
+const TokenLifetime = 30 * 24 * time.Hour
+
+// gatewayToken is edp.<payload>.<signature>: the course gateway checks the HMAC with the shared key and meters
+// the call to the platform account named in the payload (platform/backend/app/agent_gateway.py in the client repository).
+func (b *Broker) gatewayToken(accountID string, now time.Time) string {
+	claims, _ := json.Marshal(map[string]any{"acc": accountID, "exp": now.Add(TokenLifetime).Unix()})
+	payload := base64.RawURLEncoding.EncodeToString(claims)
+	mac := hmac.New(sha256.New, []byte(b.config.GatewayKey))
+	mac.Write([]byte("edp." + payload))
+	return "edp." + payload + "." + base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+}
+
+// spec mirrors the client service in deploy/compose.yml of the client repository: no secrets but the account's
+// own gateway token, read-only root, no capabilities, memory and process limits.
+func (b *Broker) spec(n names, accountID string, port int) map[string]any {
 	env := []string{
 		"HOME=/home/app", "JIUWENSWARM_HOME=/home/app", "JIUWENSWARM_CONFIG_URL=off", "JIUWENSWARM_ENABLE_ORIGIN_CHECK=1",
 		"JIUWENSWARM_WS_ALLOWED_ORIGIN_HOSTS=" + b.config.OriginHosts, "FRONTEND_HOST=0.0.0.0",
 		"EDU_PLATFORM_URL=http://course:8000", "EDU_LABS_DIR=/home/app/labs",
-		"AGENT_GATEWAY_URL=http://course:8000/api/agent/gateway/v1", "AGENT_GATEWAY_TOKEN=" + b.config.GatewayToken,
+		"AGENT_GATEWAY_URL=http://course:8000/api/agent/gateway/v1", "AGENT_GATEWAY_TOKEN=" + b.gatewayToken(accountID, time.Now()),
 	}
 	return map[string]any{
 		"Image": b.config.Image, "Env": env, "Labels": b.labels(n, port),

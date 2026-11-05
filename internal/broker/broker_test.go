@@ -136,7 +136,7 @@ func workswarm(t *testing.T) int {
 func newBroker(t *testing.T, socket string, port int) *Broker {
 	t.Helper()
 	b, err := New(Config{
-		Image: "edu-agent-jiuwen-client:test", GatewayToken: strings.Repeat("t", 32), CourseContainer: "edu-agent-jiuwen-course-1",
+		Image: "edu-agent-jiuwen-client:test", GatewayKey: strings.Repeat("k", 40), CourseContainer: "edu-agent-jiuwen-course-1",
 		OriginHosts: "agent.hrtiger.cn", Subnets: netip.MustParsePrefix("10.231.0.0/16"), FirstPort: port - 5, LastPort: port + 5,
 		Memory: 4 << 30, NanoCPUs: 2e9, Pids: 512, ReadyPath: "/api/v1/auth/status", ReadyTimeout: 5 * time.Second,
 	}, socket)
@@ -172,10 +172,18 @@ func TestEnsureBuildsAnIsolatedContainerAndStopKeepsTheFiles(t *testing.T) {
 	if host["ReadonlyRootfs"] != true || host["CapDrop"].([]any)[0] != "ALL" || host["NetworkMode"] != n.network || host["Binds"].([]any)[0] != n.volume+":/home/app" {
 		t.Errorf("container must match the client service's hardening: %v", host)
 	}
+	var token string
 	for _, value := range spec["Env"].([]any) {
-		if strings.Contains(value.(string), "DEEPSEEK") {
-			t.Errorf("no provider key may reach the container: %v", value)
+		if strings.Contains(value.(string), "DEEPSEEK") || strings.Contains(value.(string), b.config.GatewayKey) {
+			t.Errorf("no provider key or signing key may reach the container: %v", value)
 		}
+		token, _ = strings.CutPrefix(value.(string), "AGENT_GATEWAY_TOKEN=")
+		if token != value.(string) && token != "" {
+			break
+		}
+	}
+	if token != b.gatewayToken(account, time.Now()) && !strings.HasPrefix(token, "edp.") {
+		t.Errorf("container must hold its own signed gateway token, got %q", token)
 	}
 
 	if err := b.Ensure(context.Background(), account, port); err != nil {
@@ -238,7 +246,7 @@ func TestSubnetsNeverOverlap(t *testing.T) {
 		}
 		seen[subnet] = true
 	}
-	if _, err := New(Config{Image: "i", CourseContainer: "c", GatewayToken: strings.Repeat("t", 32), Subnets: netip.MustParsePrefix("10.231.0.0/24"), FirstPort: 57000, LastPort: 57999}, ""); err == nil {
+	if _, err := New(Config{Image: "i", CourseContainer: "c", GatewayKey: strings.Repeat("k", 40), Subnets: netip.MustParsePrefix("10.231.0.0/24"), FirstPort: 57000, LastPort: 57999}, ""); err == nil {
 		t.Error("a range too small for the ports must be rejected")
 	}
 }
