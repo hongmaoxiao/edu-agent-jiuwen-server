@@ -146,7 +146,7 @@ func (s *Service) CreateSchool(ctx context.Context, actor Roles, name, city stri
 // A demo operator's "every school" is only the schools of its own demo.
 func (s *Service) Schools(ctx context.Context, actor Roles) ([]SchoolView, error) {
 	query := `SELECT id,name,city,is_demo FROM schools WHERE status='active'
-		AND (($1 AND ($3='' OR demo_account_id=$3)) OR id IN (SELECT school_id FROM school_members WHERE account_id=$2)) ORDER BY name`
+		AND (($1 AND demo_account_id IS NOT DISTINCT FROM NULLIF($3,'')) OR id IN (SELECT school_id FROM school_members WHERE account_id=$2)) ORDER BY name`
 	rows, err := s.db.Query(ctx, query, actor.Operator, actor.AccountID, actor.DemoOwner)
 	if err != nil {
 		return nil, err
@@ -174,7 +174,7 @@ type Member struct {
 func (s *Service) school(ctx context.Context, actor Roles, schoolID string) (string, error) {
 	var owner string
 	err := s.db.QueryRow(ctx, "SELECT COALESCE(demo_account_id,'') FROM schools WHERE id=$1 AND status='active'", schoolID).Scan(&owner)
-	if errors.Is(err, pgx.ErrNoRows) || (err == nil && actor.DemoOwner != "" && owner != actor.DemoOwner) {
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && owner != actor.DemoOwner) {
 		return "", ErrNotFound
 	}
 	return owner, err

@@ -103,7 +103,7 @@ func (s *Service) Accounts(ctx context.Context, actor Roles) ([]AccountView, err
 	if !actor.Operator {
 		return nil, ErrForbidden
 	}
-	rows, err := s.db.Query(ctx, "SELECT "+accountColumns+" FROM accounts WHERE password_hash<>'!' AND ($1='' OR demo_account_id=$1) ORDER BY login", actor.DemoOwner)
+	rows, err := s.db.Query(ctx, "SELECT "+accountColumns+" FROM accounts WHERE password_hash<>'!' AND demo_account_id IS NOT DISTINCT FROM NULLIF($1,'') ORDER BY login", actor.DemoOwner)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (s *Service) UpdateAccount(ctx context.Context, actor Roles, id string, cha
 	}
 	defer tx.Rollback(ctx)
 	tag, err := tx.Exec(ctx, `UPDATE accounts SET can_open_classes=COALESCE($2,can_open_classes),can_create_courses=COALESCE($3,can_create_courses),
-		status=COALESCE($4,status),updated_at=now() WHERE id=$1 AND password_hash<>'!' AND ($5='' OR demo_account_id=$5)`,
+		status=COALESCE($4,status),updated_at=now() WHERE id=$1 AND password_hash<>'!' AND demo_account_id IS NOT DISTINCT FROM NULLIF($5,'')`,
 		id, change.CanOpenClasses, change.CanCreateCourses, change.Status, actor.DemoOwner)
 	if err != nil {
 		return AccountView{}, err
@@ -161,7 +161,7 @@ func (s *Service) ResetPassword(ctx context.Context, actor Roles, id string) (st
 	var operator bool
 	var owner string
 	err := s.db.QueryRow(ctx, "SELECT is_operator,COALESCE(demo_account_id,'') FROM accounts WHERE id=$1 AND password_hash<>'!'", id).Scan(&operator, &owner)
-	if errors.Is(err, pgx.ErrNoRows) || (err == nil && actor.DemoOwner != "" && owner != actor.DemoOwner) {
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && owner != actor.DemoOwner) {
 		return "", ErrNotFound
 	}
 	if err != nil {
@@ -208,7 +208,7 @@ func (s *Service) CreateClass(ctx context.Context, actor Roles, name, teacherID 
 			return ClassView{}, fmt.Errorf("%w: 请选择任教老师", ErrRejected)
 		}
 		var ok bool
-		if err := s.db.QueryRow(ctx, "SELECT EXISTS (SELECT 1 FROM accounts WHERE id=$1 AND NOT is_operator AND password_hash<>'!' AND status='active' AND ($2='' OR demo_account_id=$2))",
+		if err := s.db.QueryRow(ctx, "SELECT EXISTS (SELECT 1 FROM accounts WHERE id=$1 AND NOT is_operator AND password_hash<>'!' AND status='active' AND demo_account_id IS NOT DISTINCT FROM NULLIF($2,''))",
 			teacherID, actor.DemoOwner).Scan(&ok); err != nil {
 			return ClassView{}, err
 		}
@@ -253,7 +253,7 @@ func (s *Service) Classes(ctx context.Context, actor Roles) ([]ClassView, error)
 	rows, err := s.db.Query(ctx, `SELECT c.id,c.name,c.demo_account_id IS NOT NULL,COALESCE(m.role,''),
 		(SELECT count(*) FROM teaching_space_members st WHERE st.space_id=c.id AND st.role='student')
 		FROM teaching_spaces c LEFT JOIN teaching_space_members m ON m.space_id=c.id AND m.account_id=$2
-		WHERE c.status='active' AND (m.role IS NOT NULL OR ($1 AND c.school_id IS NULL AND ($3='' OR c.demo_account_id=$3)))
+		WHERE c.status='active' AND (m.role IS NOT NULL OR ($1 AND c.school_id IS NULL AND c.demo_account_id IS NOT DISTINCT FROM NULLIF($3,'')))
 		ORDER BY c.created_at,c.id`, actor.Operator, actor.AccountID, actor.DemoOwner)
 	if err != nil {
 		return nil, err
@@ -270,7 +270,7 @@ func (s *Service) manageClass(ctx context.Context, actor Roles, classID string) 
 	var owner, role string
 	err := s.db.QueryRow(ctx, `SELECT COALESCE(c.demo_account_id,''),COALESCE(m.role,'') FROM teaching_spaces c
 		LEFT JOIN teaching_space_members m ON m.space_id=c.id AND m.account_id=$2 WHERE c.id=$1 AND c.status='active'`, classID, actor.AccountID).Scan(&owner, &role)
-	if errors.Is(err, pgx.ErrNoRows) || (err == nil && actor.DemoOwner != "" && owner != actor.DemoOwner) {
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && owner != actor.DemoOwner) {
 		return "", ErrNotFound
 	}
 	if err != nil {

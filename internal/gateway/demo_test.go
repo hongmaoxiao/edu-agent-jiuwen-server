@@ -134,8 +134,25 @@ func TestDemoDataStaysInsideItsDemoAndResets(t *testing.T) {
 	if names := schoolNames(h.do("GET", "/v1/schools", h.mustLogin("other", "other-password", "web"), nil, nil)); len(names) != 1 || names[0] != "演示学校（另一场演示）" {
 		t.Errorf("one demo sees another demo's schools: %v", names)
 	}
-	if names := schoolNames(h.do("GET", "/v1/schools", ops, nil, nil)); len(names) != 4 {
-		t.Errorf("the real operator sees every school, demo ones included: %v", names)
+	// 演示数据只给演示账号看：真实运营的学校、教学班、账号列表里都没有演示的东西。
+	if names := schoolNames(h.do("GET", "/v1/schools", ops, nil, nil)); len(names) != 1 || names[0] != "真实学校" {
+		t.Errorf("the real operator must see real schools only: %v", names)
+	}
+	if r := h.do("GET", "/v1/classes", ops, nil, nil); len(r.body["classes"].([]any)) != 0 {
+		t.Errorf("the real operator must not see demo social classes: %v", r.body)
+	}
+	for _, a := range h.do("GET", "/v1/accounts", ops, nil, nil).body["accounts"].([]any) {
+		if login := a.(map[string]any)["login"].(string); login == "demo-admin" {
+			t.Errorf("the real operator must not see accounts opened inside a demo: %s", login)
+		}
+	}
+	if r := h.do("GET", "/v1/schools/"+extra+"/members", ops, nil, nil); r.code != 404 {
+		t.Errorf("the real operator reached a demo school: %d", r.code)
+	}
+	for _, a := range h.do("GET", "/v1/accounts", token, nil, nil).body["accounts"].([]any) {
+		if login := a.(map[string]any)["login"].(string); login == "ops" {
+			t.Errorf("the demo must not see real accounts: %s", login)
+		}
 	}
 
 	if err := account.New(h.db).ResetDemo(context.Background(), "demo"); err != nil {
@@ -152,7 +169,7 @@ func TestDemoDataStaysInsideItsDemoAndResets(t *testing.T) {
 	if r := h.do("GET", "/v1/me", teacher.str("access_token"), nil, nil); len(r.body["schools"].([]any)) != 1 {
 		t.Errorf("teacher persona lost its school on reset: %v", r.body)
 	}
-	if names := schoolNames(h.do("GET", "/v1/schools", ops, nil, nil)); len(names) != 3 {
+	if names := schoolNames(h.do("GET", "/v1/schools", ops, nil, nil)); len(names) != 1 {
 		t.Errorf("reset touched other schools: %v", names)
 	}
 }
