@@ -152,6 +152,11 @@ func TestDemoTeacherReviewsAndStudentAppeals(t *testing.T) {
 	if len(works) < 7 {
 		t.Fatalf("the demo student has earlier graded works and the current one: %v", works)
 	}
+	for _, w := range works {
+		if w.(map[string]any)["class_name"] == socialClass {
+			t.Fatalf("the demo student is only in 人工智能 2401, not the weekend class: %v", w)
+		}
+	}
 	var reviewing, appealable string
 	for _, w := range works {
 		w := w.(map[string]any)

@@ -48,11 +48,11 @@ type demoData struct {
 		Good     demoTemplate
 		OneShot  demoTemplate `json:"one_shot"`
 	} `json:"tool_lab"`
-	GenericItems  [][]any  `json:"generic_items"`
-	CommentsGood  []string `json:"comments_good"`
-	CommentsOK    []string `json:"comments_ok"`
-	AppealReasons []string `json:"appeal_reasons"`
-	AppealReply   string   `json:"appeal_reply"`
+	GenericItems [][]any                         `json:"generic_items"`
+	CommentsGood []string                        `json:"comments_good"`
+	CommentsOK   []string                        `json:"comments_ok"`
+	Appeals      []struct{ Item, Reason string } `json:"appeals"`
+	AppealReply  string                          `json:"appeal_reply"`
 }
 
 // demoTemplate rows are JSON arrays as written in the design: items [title,max,score,reason,refs,tip,capped?],
@@ -204,6 +204,10 @@ func seedDemoData(ctx context.Context, tx pgx.Tx, demo, login string, now time.T
 	// The demo social class: no school, quota granted by the operator; the demo teacher teaches it.
 	social := seedClass{id: classID}
 	if _, err := tx.Exec(ctx, "UPDATE teaching_spaces SET name=$2,course_id=$3,term=$4 WHERE id=$1", classID, s.data.SocialClass.Name, s.course, s.data.Term); err != nil {
+		return err
+	}
+	// The demo student sits in 人工智能 2401 only; otherwise every work would show up twice.
+	if _, err := tx.Exec(ctx, "DELETE FROM teaching_space_members WHERE space_id=$1 AND account_id=$2", classID, student); err != nil {
 		return err
 	}
 	rows, err := tx.Query(ctx, `SELECT a.id,a.display_name FROM teaching_space_members m JOIN accounts a ON a.id=m.account_id
@@ -417,11 +421,37 @@ func (s *demoSeed) works(class seedClass, teacher string, first bool) {
 		}
 		s.add(st, class, *s.tool, at, items, oneShot, published, teacher)
 	}
+	for _, lab := range append(slices.Clone(earlier), *s.tool) {
+		s.flagOutliers(class.id, lab.id)
+	}
 	// One work the teacher started reviewing but has not published.
 	for i := len(s.subs) - 1; i >= 0; i-- {
 		if row := s.subs[i]; row[3] == s.tool.id && row[14] == "pending" && row[2] == class.id {
 			row[14], row[11], row[12], row[13] = "draft", scoresJSON(row[9]), row[10], s.data.CommentsGood[0]
 			break
+		}
+	}
+}
+
+// flagOutliers marks works whose AI score is 20 or more points from the class median for that lab.
+func (s *demoSeed) flagOutliers(class, lab string) {
+	var rows [][]any
+	var totals []int
+	for _, row := range s.subs {
+		if row[2] == class && row[3] == lab {
+			rows = append(rows, row)
+			totals = append(totals, row[10].(int))
+		}
+	}
+	slices.Sort(totals)
+	median := totals[len(totals)/2]
+	for _, row := range rows {
+		if d := row[10].(int) - median; d >= 20 || d <= -20 {
+			var flags []string
+			if err := json.Unmarshal(row[8].([]byte), &flags); err != nil {
+				panic(err)
+			}
+			row[8] = mustJSON(append(flags, "分数偏离"))
 		}
 	}
 }
@@ -437,9 +467,6 @@ func (s *demoSeed) add(st demoStudent, class seedClass, lab demoLab, at time.Tim
 	}
 	if slices.ContainsFunc(items, func(it Item) bool { return slices.ContainsFunc(it.Refs, func(r Ref) bool { return !r.Verified }) }) {
 		flags = append(flags, "引用未核实")
-	}
-	if total < 50 && !oneShot {
-		flags = append(flags, "分数偏离")
 	}
 	files, steps := s.material(lab, at, oneShot)
 	row := []any{platform.ID("sub"), st.id, class.id, lab.id, at, mustJSON(files), mustJSON(steps), oneShot, mustJSON(flags), mustJSON(items), total,
@@ -576,10 +603,7 @@ func (s *demoSeed) appeals(student string) error {
 		if id == "" {
 			continue
 		}
-		item := "核查纠偏"
-		if i == 0 {
-			item = "说明与证据"
-		}
+		appeal := s.data.Appeals[i]
 		status, reply := "open", ""
 		var at, answeredAt any = s.now.Add(-time.Duration(20+i*30) * time.Hour), nil
 		if i == 2 {
@@ -587,7 +611,7 @@ func (s *demoSeed) appeals(student string) error {
 			at = s.now.Add(-96 * time.Hour)
 		}
 		if _, err := s.tx.Exec(s.ctx, `INSERT INTO appeals(id,submission_id,item,reason,status,reply,created_at,answered_at,demo_account_id)
-			VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`, platform.ID("apl"), id, item, s.data.AppealReasons[i%len(s.data.AppealReasons)], status, reply, at, answeredAt, s.demo); err != nil {
+			VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`, platform.ID("apl"), id, appeal.Item, appeal.Reason, status, reply, at, answeredAt, s.demo); err != nil {
 			return err
 		}
 	}
