@@ -16,6 +16,7 @@ import (
 
 	"edu-agent-jiuwen-server/internal/account"
 	"edu-agent-jiuwen-server/internal/platform"
+	"edu-agent-jiuwen-server/internal/teaching"
 	"edu-agent-jiuwen-server/internal/workspace"
 	"edu-agent-jiuwen-server/migrations"
 
@@ -31,10 +32,11 @@ type Server struct {
 	accounts *account.Service
 	// workspaces is nil until WithWorkspaces: then POST /v1/workspace answers 503.
 	workspaces *workspace.Service
+	teaching   *teaching.Service
 }
 
 func New(config platform.Config, db *pgxpool.Pool) *Server {
-	s := &Server{config: config, db: db, mux: http.NewServeMux(), accounts: account.New(db)}
+	s := &Server{config: config, db: db, mux: http.NewServeMux(), accounts: account.New(db), teaching: teaching.New(db)}
 	s.route("GET /livez", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "alive"})
 	})
@@ -43,6 +45,7 @@ func New(config platform.Config, db *pgxpool.Pool) *Server {
 	s.registerSchools()
 	s.registerClasses()
 	s.registerWorkspace()
+	s.registerTeaching()
 	return s
 }
 

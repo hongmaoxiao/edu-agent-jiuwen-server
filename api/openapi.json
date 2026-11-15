@@ -996,6 +996,724 @@
           }
         }
       }
+    },
+    "/v1/overview": {
+      "get": {
+        "summary": "总览：今日、本月、累计 Token，学生和教学班数，30 天趋势，本月模型占比，用量排行",
+        "tags": [
+          "teaching"
+        ],
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "description": "platform 全平台、school 一所学校、social 社会班（以上运营或学校管理员）；teach 自己任教的班；mine 自己",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "platform",
+                "school",
+                "social",
+                "teach",
+                "mine"
+              ]
+            }
+          },
+          {
+            "name": "school_id",
+            "in": "query",
+            "required": false,
+            "description": "scope=school 时必填",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "class_id",
+            "in": "query",
+            "required": false,
+            "description": "scope=teach 时可选，只看一个班",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Overview"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/usage": {
+      "get": {
+        "summary": "用量明细：按天的趋势和按学校、教学班、实训、模型、学生或日期分组的表",
+        "tags": [
+          "teaching"
+        ],
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "description": "platform 全平台、school 一所学校、social 社会班（以上运营或学校管理员）；teach 自己任教的班；mine 自己",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "platform",
+                "school",
+                "social",
+                "teach",
+                "mine"
+              ]
+            }
+          },
+          {
+            "name": "school_id",
+            "in": "query",
+            "required": false,
+            "description": "scope=school 时必填",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "class_id",
+            "in": "query",
+            "required": false,
+            "description": "scope=teach 时可选，只看一个班",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "group",
+            "in": "query",
+            "required": false,
+            "description": "分组",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "school",
+                "class",
+                "lab",
+                "model",
+                "student",
+                "day"
+              ]
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "description": "最近几天，1–366，默认 30",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Usage"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/schools/stats": {
+      "get": {
+        "summary": "院校列表（运营）：联系人、教学班、教师、学生、本月 Token、每月额度",
+        "tags": [
+          "teaching"
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "schools": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SchoolStat"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/models": {
+      "get": {
+        "summary": "模型目录、单价（元 / 百万 Token）和本月用量（运营）",
+        "tags": [
+          "teaching"
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "models": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Model"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/budgets": {
+      "get": {
+        "summary": "每月 Token 额度和本月已用：运营看全部学校和社会班，学校管理员看本校",
+        "tags": [
+          "teaching"
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "budgets": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Budget"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/works": {
+      "get": {
+        "summary": "我的作品，新的在前；教师成绩发布前不返回",
+        "tags": [
+          "works"
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "works": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/WorkRow"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/works/{work}": {
+      "get": {
+        "summary": "一份作品：文件、学员指令与核查回答、AI 逐项初评、教师成绩和评语、申诉。提交人或任教老师可看",
+        "tags": [
+          "works"
+        ],
+        "parameters": [
+          {
+            "name": "work",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Work"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/works/{work}/appeal": {
+      "post": {
+        "summary": "对已发布的成绩申诉：每份作品一次，发布后 7 天内，针对一个评分项",
+        "tags": [
+          "works"
+        ],
+        "parameters": [
+          {
+            "name": "work",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "item": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "item",
+                  "reason"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Work"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/review": {
+      "get": {
+        "summary": "作品评阅：任教的班、班里交过作品的实训、某班某实训的作品（待评阅在前）",
+        "tags": [
+          "works"
+        ],
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "query",
+            "required": false,
+            "description": "默认第一个班",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lab_id",
+            "in": "query",
+            "required": false,
+            "description": "默认待评阅最多的实训",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "classes": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Option"
+                      }
+                    },
+                    "labs": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Option"
+                      }
+                    },
+                    "class_id": {
+                      "type": "string"
+                    },
+                    "lab_id": {
+                      "type": "string"
+                    },
+                    "students": {
+                      "type": "integer"
+                    },
+                    "submissions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/WorkRow"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/review/{work}": {
+      "put": {
+        "summary": "教师逐项打分、写评语，存草稿或发布；已发布的修改后仍是已发布",
+        "tags": [
+          "works"
+        ],
+        "parameters": [
+          {
+            "name": "work",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "scores": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  },
+                  "comment": {
+                    "type": "string"
+                  },
+                  "publish": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "scores"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Work"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/review/publish": {
+      "post": {
+        "summary": "批量发布成绩；教师没改分的按 AI 初评发布",
+        "tags": [
+          "works"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "ids"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "published": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/gradebook": {
+      "get": {
+        "summary": "成绩册：一个班的学生 × 实训，已发布的成绩和平均分",
+        "tags": [
+          "works"
+        ],
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "query",
+            "required": false,
+            "description": "默认第一个班",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "classes": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Option"
+                      }
+                    },
+                    "class_id": {
+                      "type": "string"
+                    },
+                    "labs": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Option"
+                      }
+                    },
+                    "rows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "student_id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "scores": {
+                            "type": "array",
+                            "items": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
+                            }
+                          },
+                          "statuses": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "missing",
+                                "pending",
+                                "draft",
+                                "published",
+                                "appealing"
+                              ]
+                            }
+                          },
+                          "average": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/appeals": {
+      "get": {
+        "summary": "任教班级的申诉，待处理在前",
+        "tags": [
+          "works"
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "appeals": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AppealRow"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/appeals/{appeal}/answer": {
+      "post": {
+        "summary": "回复申诉；要改分先用 PUT /v1/review/{work}",
+        "tags": [
+          "works"
+        ],
+        "parameters": [
+          {
+            "name": "appeal",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "reply": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "reply"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "已回复"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1292,6 +2010,642 @@
           "account",
           "role"
         ]
+      },
+      "Point": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "tokens": {
+            "type": "integer"
+          },
+          "calls": {
+            "type": "integer"
+          }
+        }
+      },
+      "Share": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "tokens": {
+            "type": "integer"
+          },
+          "calls": {
+            "type": "integer"
+          },
+          "cost": {
+            "type": "number"
+          }
+        }
+      },
+      "RankRow": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "school",
+              "class"
+            ]
+          },
+          "tokens": {
+            "type": "integer"
+          },
+          "students": {
+            "type": "integer"
+          },
+          "calls": {
+            "type": "integer"
+          }
+        }
+      },
+      "Overview": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "today_tokens": {
+            "type": "integer"
+          },
+          "yesterday_tokens": {
+            "type": "integer"
+          },
+          "month_tokens": {
+            "type": "integer"
+          },
+          "total_tokens": {
+            "type": "integer"
+          },
+          "month_calls": {
+            "type": "integer"
+          },
+          "students": {
+            "type": "integer"
+          },
+          "schools": {
+            "type": "integer"
+          },
+          "classes": {
+            "type": "integer"
+          },
+          "social_classes": {
+            "type": "integer"
+          },
+          "trend": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Point"
+            }
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Share"
+            }
+          },
+          "rank": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RankRow"
+            }
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UsageRow": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "extra": {
+            "type": "string"
+          },
+          "input_tokens": {
+            "type": "integer"
+          },
+          "output_tokens": {
+            "type": "integer"
+          },
+          "calls": {
+            "type": "integer"
+          },
+          "cost": {
+            "type": "number"
+          }
+        }
+      },
+      "Usage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "trend": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Point"
+            }
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageRow"
+            }
+          },
+          "total": {
+            "$ref": "#/components/schemas/UsageRow"
+          }
+        }
+      },
+      "SchoolStat": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "contact": {
+            "type": "string"
+          },
+          "classes": {
+            "type": "integer"
+          },
+          "teachers": {
+            "type": "integer"
+          },
+          "students": {
+            "type": "integer"
+          },
+          "month_tokens": {
+            "type": "integer"
+          },
+          "monthly_quota": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "Model": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "input_price": {
+            "type": "number"
+          },
+          "output_price": {
+            "type": "number"
+          },
+          "month_tokens": {
+            "type": "integer"
+          },
+          "month_calls": {
+            "type": "integer"
+          },
+          "month_cost": {
+            "type": "number"
+          }
+        }
+      },
+      "Budget": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "school",
+              "class"
+            ]
+          },
+          "monthly_tokens": {
+            "type": "integer"
+          },
+          "used_tokens": {
+            "type": "integer"
+          }
+        }
+      },
+      "WorkRow": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "lab_id": {
+            "type": "string"
+          },
+          "lab_title": {
+            "type": "string"
+          },
+          "chapter": {
+            "type": "string"
+          },
+          "class_id": {
+            "type": "string"
+          },
+          "class_name": {
+            "type": "string"
+          },
+          "student": {
+            "type": "string"
+          },
+          "submitted_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ai_total": {
+            "type": "number"
+          },
+          "teacher_total": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "学生只在发布后看到"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "draft",
+              "published",
+              "appealing"
+            ]
+          },
+          "flags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "published_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "Item": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "max": {
+            "type": "integer"
+          },
+          "score": {
+            "type": "integer"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "refs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "verified": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "tip": {
+            "type": "string"
+          },
+          "capped": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Appeal": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "item": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "answered"
+            ]
+          },
+          "reply": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "answered_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "Work": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "lab_id": {
+            "type": "string"
+          },
+          "lab_title": {
+            "type": "string"
+          },
+          "chapter": {
+            "type": "string"
+          },
+          "class_id": {
+            "type": "string"
+          },
+          "class_name": {
+            "type": "string"
+          },
+          "student": {
+            "type": "string"
+          },
+          "submitted_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ai_total": {
+            "type": "number"
+          },
+          "teacher_total": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "学生只在发布后看到"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "draft",
+              "published",
+              "appealing"
+            ]
+          },
+          "flags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "published_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "size": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "time": {
+                  "type": "string"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "question": {
+                  "type": "string"
+                },
+                "answer": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "one_shot": {
+            "type": "boolean"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            }
+          },
+          "teacher_scores": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer"
+            }
+          },
+          "comment": {
+            "type": "string"
+          },
+          "reviewer": {
+            "type": "string"
+          },
+          "appeal": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Appeal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "appeal_until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "Option": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "submitted": {
+            "type": "integer"
+          },
+          "pending": {
+            "type": "integer"
+          }
+        }
+      },
+      "AppealRow": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "item": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "answered"
+            ]
+          },
+          "reply": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "answered_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "submission_id": {
+            "type": "string"
+          },
+          "student": {
+            "type": "string"
+          },
+          "lab_title": {
+            "type": "string"
+          },
+          "class_name": {
+            "type": "string"
+          },
+          "teacher_total": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        }
       }
     }
   }

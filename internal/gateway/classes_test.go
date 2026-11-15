@@ -220,12 +220,13 @@ func TestDemoSocialClassStaysInsideItsDemoAndResets(t *testing.T) {
 	teacher := h.switchTo(token, "teacher")
 	token = teacher.str("access_token")
 	me := h.do("GET", "/v1/me", token, nil, nil)
-	if roles := classRoles(me); roles["演示社会班"] != "teacher" || me.body["account"].(map[string]any)["can_open_classes"] != true {
-		t.Fatalf("demo teacher teaches the demo social class: %v", me.body)
+	// 演示教师教示例学校的两个班和演示社会班（演示数据见 internal/account/demodata.json）。
+	if roles := classRoles(me); len(roles) != 3 || roles[socialClass] != "teacher" || me.body["account"].(map[string]any)["can_open_classes"] != true {
+		t.Fatalf("demo teacher teaches two school classes and the demo social class: %v", me.body)
 	}
-	demoClass := me.body["classes"].([]any)[0].(map[string]any)
-	if demoClass["students"] != float64(4) {
-		t.Errorf("demo class holds the demo student and three social students: %v", demoClass)
+	demoClass := classNamed(me, socialClass)
+	if demoClass["students"] != float64(20) {
+		t.Errorf("demo social class holds the demo student and the social students: %v", demoClass)
 	}
 	extra := h.class(token, "演示时开的班")
 	h.students(token, extra, "demo-guest")
@@ -236,10 +237,10 @@ func TestDemoSocialClassStaysInsideItsDemoAndResets(t *testing.T) {
 	}
 	token = h.switchTo(h.mustLogin("demo", "demo-password", "web"), "teacher").str("access_token")
 	after := h.do("GET", "/v1/me", token, nil, nil)
-	if roles := classRoles(after); len(roles) != 1 || roles["演示社会班"] != "teacher" {
-		t.Errorf("reset keeps only the demo social class: %v", roles)
+	if roles := classRoles(after); len(roles) != 3 || roles[socialClass] != "teacher" || roles["演示时开的班"] != "" {
+		t.Errorf("reset drops classes opened during the demo: %v", roles)
 	}
-	if after.body["classes"].([]any)[0].(map[string]any)["students"] != float64(4) {
+	if classNamed(after, socialClass)["students"] != float64(20) {
 		t.Errorf("reset restores the demo class's students: %v", after.body["classes"])
 	}
 	if h.login("demo-guest", "x-password-123", "web").code != 401 {
@@ -272,4 +273,15 @@ func TestSetPasswordReplacesAndEndsSessions(t *testing.T) {
 	if err := svc.SetPassword(context.Background(), "demo.teacher", "persona-password"); err == nil {
 		t.Error("personas must stay unable to sign in")
 	}
+}
+
+const socialClass = "AI 智能体周末班"
+
+func classNamed(me reply, name string) map[string]any {
+	for _, c := range me.body["classes"].([]any) {
+		if c := c.(map[string]any); c["name"] == name {
+			return c
+		}
+	}
+	return map[string]any{}
 }

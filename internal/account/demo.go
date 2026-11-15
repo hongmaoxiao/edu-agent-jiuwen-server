@@ -103,6 +103,9 @@ func (s *Service) CreateDemo(ctx context.Context, login, displayName, password s
 	if err := demoClass(ctx, tx, id, normalized); err != nil {
 		return AccountView{}, err
 	}
+	if err := seedDemoData(ctx, tx, id, normalized, time.Now()); err != nil {
+		return AccountView{}, err
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return AccountView{}, err
 	}
@@ -157,6 +160,11 @@ func (s *Service) ResetDemo(ctx context.Context, login string) error {
 		sql  string
 		args []any
 	}{
+		{"DELETE FROM appeals WHERE demo_account_id=$1", []any{demo}},
+		{"DELETE FROM submissions WHERE demo_account_id=$1", []any{demo}},
+		{"DELETE FROM usage_records WHERE demo_account_id=$1", []any{demo}},
+		{"DELETE FROM budgets WHERE demo_account_id=$1", []any{demo}},
+		{"DELETE FROM models WHERE demo_account_id=$1", []any{demo}},
 		{"DELETE FROM accounts WHERE demo_account_id=$1 AND id NOT IN (SELECT persona_account_id FROM demo_personas WHERE demo_account_id=$1)", []any{demo}},
 		{"DELETE FROM schools WHERE demo_account_id=$1 AND id<>$2", []any{demo, school}},
 		{"DELETE FROM teaching_spaces WHERE demo_account_id=$1 AND id IS DISTINCT FROM (SELECT class_id FROM demo_setups WHERE account_id=$1)", []any{demo}},
@@ -170,6 +178,9 @@ func (s *Service) ResetDemo(ctx context.Context, login string) error {
 		}
 	}
 	if err := demoClass(ctx, tx, demo, normalized); err != nil {
+		return err
+	}
+	if err := seedDemoData(ctx, tx, demo, normalized, time.Now()); err != nil {
 		return err
 	}
 	if err := audit(ctx, tx, Roles{AccountID: demo}, "demo.reset", school); err != nil {

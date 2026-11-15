@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"net/http"
+	"slices"
 	"testing"
 
 	"edu-agent-jiuwen-server/internal/account"
@@ -40,8 +41,8 @@ func TestDemoSwitchesPerspectiveWithoutSigningOut(t *testing.T) {
 	if me.code != 200 || demo["perspective"] != "operator" || demo["display_name"] != "客户演示" || me.body["account"].(map[string]any)["is_operator"] != true {
 		t.Fatalf("demo sign-in starts as the demo operator: %d %v", me.code, me.body)
 	}
-	if names := schoolNames(h.do("GET", "/v1/schools", token, nil, nil)); len(names) != 1 || names[0] != "演示学校（客户演示）" {
-		t.Errorf("demo operator must see only its demo school, got %v", names)
+	if names := schoolNames(h.do("GET", "/v1/schools", token, nil, nil)); len(names) != 8 || !slices.Contains(names, "内蒙古大学") || slices.Contains(names, "真实学校") {
+		t.Errorf("demo operator must see only its eight sample schools, got %v", names)
 	}
 	if r := h.do("GET", "/v1/schools/"+real+"/members", token, nil, nil); r.code != 404 {
 		t.Errorf("demo operator reached a real school: %d", r.code)
@@ -131,7 +132,7 @@ func TestDemoDataStaysInsideItsDemoAndResets(t *testing.T) {
 	if r := h.do("GET", "/v1/schools/"+real+"/members", admin, nil, nil); r.code != 404 {
 		t.Errorf("an account opened inside a demo reached a real school: %d", r.code)
 	}
-	if names := schoolNames(h.do("GET", "/v1/schools", h.mustLogin("other", "other-password", "web"), nil, nil)); len(names) != 1 || names[0] != "演示学校（另一场演示）" {
+	if names := schoolNames(h.do("GET", "/v1/schools", h.mustLogin("other", "other-password", "web"), nil, nil)); len(names) != 8 || slices.Contains(names, "演示新校") {
 		t.Errorf("one demo sees another demo's schools: %v", names)
 	}
 	// 演示数据只给演示账号看：真实运营的学校、教学班、账号列表里都没有演示的东西。
@@ -162,8 +163,8 @@ func TestDemoDataStaysInsideItsDemoAndResets(t *testing.T) {
 		t.Errorf("account opened during the demo survived the reset: %d", r.code)
 	}
 	after := h.mustLogin("demo", "demo-password", "web")
-	if names := schoolNames(h.do("GET", "/v1/schools", after, nil, nil)); len(names) != 1 || names[0] != "演示学校（客户演示）" {
-		t.Errorf("after reset the demo keeps only its own school: %v", names)
+	if names := schoolNames(h.do("GET", "/v1/schools", after, nil, nil)); len(names) != 8 || slices.Contains(names, "演示新校") {
+		t.Errorf("after reset the demo keeps only its sample schools: %v", names)
 	}
 	teacher := h.switchTo(after, "teacher")
 	if r := h.do("GET", "/v1/me", teacher.str("access_token"), nil, nil); len(r.body["schools"].([]any)) != 1 {
