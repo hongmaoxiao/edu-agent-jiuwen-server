@@ -198,16 +198,22 @@ func (s *Service) Submit(ctx context.Context, r account.Roles, projectID string,
 	return s.Task(ctx, r, id)
 }
 
-// Cancel stops a task that has not reached the provider yet and refunds it.
+// Cancel stops a task. Queued tasks have not reached the provider and are refunded; running ones keep their charge.
 func (s *Service) Cancel(ctx context.Context, r account.Roles, id string) (Task, error) {
 	t, err := s.Task(ctx, r, id)
 	if err != nil {
 		return t, err
 	}
-	if t.Status != "queued" {
-		return t, rejectf("只能取消还在排队的任务；已经交给模型的任务没法撤回")
+	// 规则（用户 2026-11-17 定）：还没发给模型的任务全额退点；已经发给模型的，模型费用已经产生，取消只是不再等结果，不退点。
+	switch t.Status {
+	case "queued":
+		err = s.finish(ctx, id, "cancelled", nil, t.Estimate, "", "已取消，还没发给模型，创作点已全额退回", "取消退回")
+	case "running":
+		err = s.finish(ctx, id, "cancelled", nil, 0, "CANCELLED_AFTER_SEND", "已取消。请求已经发给模型，费用已经产生，按规则不退点", "")
+	default:
+		return t, rejectf("这个任务已经结束，不能取消")
 	}
-	if err := s.finish(ctx, id, "cancelled", nil, t.Estimate, "", "已取消，创作点已退回", "取消退回"); err != nil {
+	if err != nil {
 		return t, err
 	}
 	return s.Task(ctx, r, id)
@@ -346,7 +352,9 @@ func (s *Service) step(ctx context.Context, c claimed) {
 	var out Outcome
 	switch {
 	case c.status == "queued":
-		if _, err := s.db.Exec(ctx, "UPDATE comic_tasks SET status='running',started_at=now() WHERE id=$1", c.id); err != nil {
+		// 只有仍在排队的任务才发给模型：领取后、发出前被取消的（已全额退点）就此放弃。
+		tag, uerr := s.db.Exec(ctx, "UPDATE comic_tasks SET status='running',started_at=now() WHERE id=$1 AND status='queued'", c.id)
+		if uerr != nil || tag.RowsAffected() == 0 {
 			return
 		}
 		out, err = p.Run(ctx, job)
@@ -379,7 +387,7 @@ func (s *Service) step(ctx context.Context, c claimed) {
 			next = 10 * time.Second
 		}
 		ptid := firstNonEmpty(out.ProviderTaskID, c.providerTaskID)
-		s.db.Exec(ctx, "UPDATE comic_tasks SET provider_task_id=$2,next_check_at=now()+$3::interval,lease_until=NULL WHERE id=$1",
+		s.db.Exec(ctx, "UPDATE comic_tasks SET provider_task_id=$2,next_check_at=now()+$3::interval,lease_until=NULL WHERE id=$1 AND status='running'",
 			c.id, ptid, fmt.Sprintf("%d milliseconds", next.Milliseconds()))
 		return
 	}

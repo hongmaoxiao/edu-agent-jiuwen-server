@@ -23,6 +23,9 @@ const sampleScript = `《迟到的纸飞机》
 type pricedFake struct{}
 
 func (pricedFake) Run(ctx context.Context, job comic.Job) (comic.Outcome, error) {
+	if job.Kind == comic.KindVideo { // 异步：模型已受理，一直没出结果
+		return comic.Outcome{Pending: true, ProviderTaskID: "fake-video"}, nil
+	}
 	if strings.Contains(job.Input.Prompt, "fail") {
 		return comic.Outcome{}, &comic.Failure{Code: "CONTENT_REJECTED", Message: "内容没有通过模型的安全审核"}
 	}
@@ -36,7 +39,7 @@ func (pricedFake) Run(ctx context.Context, job comic.Job) (comic.Outcome, error)
 }
 
 func (pricedFake) Check(context.Context, comic.Job) (comic.Outcome, error) {
-	return comic.Outcome{}, nil
+	return comic.Outcome{Pending: true}, nil
 }
 
 func comicHarness(t *testing.T) (*harness, *comic.Service, string) {
@@ -209,6 +212,23 @@ func TestComicCreditsChargeRefundAndLimits(t *testing.T) {
 	h.waitTask(token, first.str("id"))
 	if l := h.do("GET", "/v1/comic/ledger", token, nil, nil); l.body["balance"].(float64) != 92 {
 		t.Fatalf("balance after a repeated request: %v", l.body["balance"])
+	}
+	// 已经发给模型的任务可以取消，但费用已经产生，不退点（H3 768P 4 秒 = 20 点）。
+	video := h.do("POST", "/v1/comic/projects/"+project+"/tasks", token, map[string]any{"kind": "video", "model": "minimax-h3", "target": "shot:s1/video", "label": "S01 视频",
+		"input": map[string]any{"prompt": "x", "duration": 4, "resolution": "768P", "ratio": "9:16"}}, nil)
+	for i := 0; i < 100 && video.str("status") != "running"; i++ {
+		time.Sleep(100 * time.Millisecond)
+		video = h.do("GET", "/v1/comic/tasks/"+video.str("id"), token, nil, nil)
+	}
+	cancelled := h.do("POST", "/v1/comic/tasks/"+video.str("id")+"/cancel", token, nil, nil)
+	if cancelled.str("status") != "cancelled" || cancelled.body["refunded"].(float64) != 0 || cancelled.body["charged"].(float64) != 20 {
+		t.Fatalf("cancel after send: %d %v", cancelled.code, cancelled.body)
+	}
+	if again := h.do("POST", "/v1/comic/tasks/"+video.str("id")+"/cancel", token, nil, nil); again.code != 400 {
+		t.Fatalf("cancel twice: %d %v", again.code, again.body)
+	}
+	if l := h.do("GET", "/v1/comic/ledger", token, nil, nil); l.body["balance"].(float64) != 72 {
+		t.Fatalf("balance after cancelling a sent task: %v", l.body["balance"])
 	}
 	// 参数随模型：Seedance Fast 不能选 1080p；没配密钥的模型不可用。
 	bad := h.do("POST", "/v1/comic/estimate", token, map[string]any{"kind": "video", "model": "minimax-h3-highspeed",
