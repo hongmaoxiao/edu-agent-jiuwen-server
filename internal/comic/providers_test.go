@@ -208,3 +208,35 @@ func TestBreakdownToleratesNumbersAndUnits(t *testing.T) {
 		t.Fatalf("%v %+v", err, b)
 	}
 }
+
+// 连不上（没发出）可以放心退点；发出后断开、回复看不懂，都是「结果未知」。
+func TestCallTellsUnsentFromUnknown(t *testing.T) {
+	code := func(err error) string {
+		f, ok := err.(*Failure)
+		if !ok {
+			t.Fatalf("not a Failure: %v", err)
+		}
+		return f.Code
+	}
+	closed := httptest.NewServer(http.NotFoundHandler())
+	addr := closed.URL
+	closed.Close()
+	if c := code(call(context.Background(), "minimax", "POST", addr+"/x", "k", map[string]any{}, nil)); c != "PROVIDER_UNREACHABLE" {
+		t.Fatalf("closed port: %s", c)
+	}
+	hangup := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.ReadAll(r.Body)
+		conn, _, _ := w.(http.Hijacker).Hijack()
+		conn.Close()
+	}))
+	defer hangup.Close()
+	if c := code(call(context.Background(), "minimax", "POST", hangup.URL+"/x", "k", map[string]any{}, nil)); c != ResultUnknown {
+		t.Fatalf("hang-up after send: %s", c)
+	}
+	garbled := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { io.WriteString(w, "<html>") }))
+	defer garbled.Close()
+	var out map[string]any
+	if c := code(call(context.Background(), "minimax", "POST", garbled.URL+"/x", "k", map[string]any{}, &out)); c != ResultUnknown {
+		t.Fatalf("unreadable 200: %s", c)
+	}
+}

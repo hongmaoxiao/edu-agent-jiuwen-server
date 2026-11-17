@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"regexp"
@@ -115,6 +116,10 @@ func short(message string) string {
 // client is shared by the providers; the server's HTTPS_PROXY applies (Grok reaches providers through it).
 var client = &http.Client{Timeout: 11 * time.Minute}
 
+// ResultUnknown: the request may have reached the provider (and be billed) but no usable answer came back.
+// 用户 2026-11-17 定：这种任务点数先冻结、标「待核对」，核对后确实发出就扣，没发出就退。
+const ResultUnknown = "RESULT_UNKNOWN"
+
 // call posts or gets JSON. On HTTP errors it extracts the provider's error and explains it.
 func call(ctx context.Context, provider, method, url, key string, body any, out any) error {
 	var reader io.Reader
@@ -138,12 +143,17 @@ func call(ctx context.Context, provider, method, url, key string, body any, out 
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		return failure("PROVIDER_UNREACHABLE", "连不上模型服务，请稍后重试")
+		// 连接都没建立（含代理连不上）：请求肯定没发出。其余（超时、发出后断开）不知道模型收没收到。
+		var op *net.OpError
+		if errors.As(err, &op) && (op.Op == "dial" || op.Op == "proxyconnect") {
+			return failure("PROVIDER_UNREACHABLE", "连不上模型服务，请稍后重试")
+		}
+		return failure(ResultUnknown, "请求可能已经发给模型，但没收到回复")
 	}
 	defer resp.Body.Close()
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, 256<<20))
 	if err != nil {
-		return failure("PROVIDER_UNREACHABLE", "模型服务的响应没有收完整，请重试")
+		return failure(ResultUnknown, "模型服务的回复没有收完整")
 	}
 	if resp.StatusCode >= 300 {
 		code, message := errorOf(raw)
@@ -151,7 +161,7 @@ func call(ctx context.Context, provider, method, url, key string, body any, out 
 	}
 	if out != nil {
 		if err := json.Unmarshal(raw, out); err != nil {
-			return failure("PROVIDER_ERROR", "模型服务返回了看不懂的内容，请重试")
+			return failure(ResultUnknown, "模型服务接受了请求，但回复看不懂")
 		}
 	}
 	return nil

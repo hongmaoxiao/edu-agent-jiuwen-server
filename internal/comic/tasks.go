@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"os"
 	"slices"
 	"strings"
@@ -16,6 +17,7 @@ import (
 	"edu-agent-jiuwen-server/internal/platform"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Task struct {
@@ -174,6 +176,13 @@ func (s *Service) Submit(ctx context.Context, r account.Roles, projectID string,
 				return err
 			}
 		}
+		var pending int
+		if err := tx.QueryRow(ctx, "SELECT count(*) FROM comic_tasks WHERE project_id=$1 AND target=$2 AND status='unknown'", projectID, sub.Target).Scan(&pending); err != nil {
+			return err
+		}
+		if pending > 0 {
+			return rejectf("这一项有一个「结果待核对」的任务，核对完才能重新生成，免得重复付费。请联系老师或运营核对")
+		}
 		balance, err := balanceOf(ctx, tx, r.AccountID)
 		if err != nil {
 			return err
@@ -205,6 +214,9 @@ func (s *Service) Cancel(ctx context.Context, r account.Roles, id string) (Task,
 		return t, err
 	}
 	// 规则（用户 2026-11-17 定）：还没发给模型的任务全额退点；已经发给模型的，模型费用已经产生，取消只是不再等结果，不退点。
+	if t.Status == "unknown" {
+		return t, rejectf("结果待核对的任务不能取消，由老师或运营核对后扣点或退点")
+	}
 	// 按读到的状态精确匹配：读到排队、这期间后台恰好发给了模型，就按已发出处理，不退点。
 	done, err := s.finishFrom(ctx, []string{"queued"}, id, "cancelled", nil, t.Estimate, "", "已取消，还没发给模型，创作点已全额退回", "取消退回")
 	if err == nil && !done {
@@ -217,6 +229,27 @@ func (s *Service) Cancel(ctx context.Context, r account.Roles, id string) (Task,
 		return t, rejectf("这个任务已经结束，不能取消")
 	}
 	return s.Task(ctx, r, id)
+}
+
+// SettleTask is Settle for the admin command, which has a database but no running studio.
+func SettleTask(ctx context.Context, db *pgxpool.Pool, id string, charge bool, note string) error {
+	return (&Service{db: db}).Settle(ctx, id, charge, note)
+}
+
+// Settle decides a task whose result is unknown: charge keeps the points (the provider did get it), refund returns them.
+func (s *Service) Settle(ctx context.Context, id string, charge bool, note string) error {
+	refund, code, message := math.MaxInt32, "SETTLED_REFUNDED", "核对结果：模型没有收到这次请求，创作点已全额退回" // finishFrom 退点不超过预扣
+	if charge {
+		refund, code, message = 0, "SETTLED_CHARGED", "核对结果：模型收到了这次请求并已计费，创作点不退。结果没能取回，请重新生成"
+	}
+	if note = strings.TrimSpace(note); note != "" {
+		message += "（" + note + "）"
+	}
+	done, err := s.finishFrom(ctx, []string{"unknown"}, id, "failed", nil, refund, code, message, "核对退回")
+	if err == nil && !done {
+		return rejectf("没有这个待核对的任务")
+	}
+	return err
 }
 
 func (s *Service) poke() {
@@ -374,6 +407,19 @@ func (s *Service) step(ctx context.Context, c claimed) {
 			return // 服务正在关闭：租约到期后由下一次启动接着处理
 		}
 		var f *Failure
+		if errors.As(err, &f) {
+			switch {
+			case (f.Code == ResultUnknown || f.Code == "PROVIDER_UNREACHABLE") && c.providerTaskID != "":
+				// 模型已经受理、在跑也在计费：查询时网络抖一下不算失败，过一会儿接着查。
+				s.db.Exec(ctx, "UPDATE comic_tasks SET next_check_at=now()+interval '30 seconds',lease_until=NULL WHERE id=$1 AND status='running'", c.id)
+				return
+			case f.Code == ResultUnknown:
+				// 提交时不知道模型收没收到：点数冻结，等核对（Settle）。
+				s.db.Exec(ctx, "UPDATE comic_tasks SET status='unknown',error_code=$2,error_message=$3,lease_until=NULL WHERE id=$1 AND status='running'",
+					c.id, f.Code, f.Message+"。点数先冻结，核对后：确实发出就扣，没发出就退")
+				return
+			}
+		}
 		if !errors.As(err, &f) {
 			slog.Error("comic task step failed", "service", "edu-agent-jiuwen-server", "kind", c.kind, "provider", c.provider, "error", err.Error())
 			f = failure("INTERNAL", "处理结果时出错，创作点已退回，请重试")

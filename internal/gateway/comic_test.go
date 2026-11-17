@@ -26,6 +26,9 @@ func (pricedFake) Run(ctx context.Context, job comic.Job) (comic.Outcome, error)
 	if job.Kind == comic.KindVideo { // 异步：模型已受理，一直没出结果
 		return comic.Outcome{Pending: true, ProviderTaskID: "fake-video"}, nil
 	}
+	if strings.Contains(job.Input.Prompt, "unknown") {
+		return comic.Outcome{}, &comic.Failure{Code: comic.ResultUnknown, Message: "请求可能已经发给模型，但没收到回复"}
+	}
 	if strings.Contains(job.Input.Prompt, "fail") {
 		return comic.Outcome{}, &comic.Failure{Code: "CONTENT_REJECTED", Message: "内容没有通过模型的安全审核"}
 	}
@@ -255,6 +258,27 @@ func TestComicCreditsChargeRefundAndLimits(t *testing.T) {
 	}
 	if l := h.do("GET", "/v1/comic/ledger", token, nil, nil); l.body["balance"].(float64) != 36 {
 		t.Fatalf("balance after queued and sent cancels: %v", l.body["balance"])
+	}
+	// 结果未知：点数冻结、标待核对；同一项不能重提，不能取消；运营核对后扣或退。
+	unknown := h.submit(token, project, image("unknown", 1))
+	if unknown.str("status") != "unknown" || unknown.body["refunded"].(float64) != 0 || !strings.Contains(unknown.str("error_message"), "冻结") {
+		t.Fatalf("unknown: %v", unknown.body)
+	}
+	if again := h.do("POST", "/v1/comic/projects/"+project+"/tasks", token, image("ok", 1), nil); again.code != 400 || !strings.Contains(again.str("error", "message"), "待核对") {
+		t.Fatalf("resubmit while unknown: %d %v", again.code, again.body)
+	}
+	if c := h.do("POST", "/v1/comic/tasks/"+unknown.str("id")+"/cancel", token, nil, nil); c.code != 400 {
+		t.Fatalf("cancel unknown: %d %v", c.code, c.body)
+	}
+	if err := comic.SettleTask(context.Background(), h.db, unknown.str("id"), false, "供应商后台无此任务"); err != nil {
+		t.Fatal(err)
+	}
+	settled := h.do("GET", "/v1/comic/tasks/"+unknown.str("id"), token, nil, nil)
+	if settled.str("status") != "failed" || settled.body["refunded"].(float64) != 4 || !strings.Contains(settled.str("error_message"), "供应商后台无此任务") {
+		t.Fatalf("settled: %v", settled.body)
+	}
+	if err := comic.SettleTask(context.Background(), h.db, unknown.str("id"), true, ""); err == nil {
+		t.Fatal("settled twice")
 	}
 	// 参数随模型：Seedance Fast 不能选 1080p；没配密钥的模型不可用。
 	bad := h.do("POST", "/v1/comic/estimate", token, map[string]any{"kind": "video", "model": "minimax-h3-highspeed",

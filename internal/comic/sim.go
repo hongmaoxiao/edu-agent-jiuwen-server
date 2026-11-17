@@ -21,15 +21,19 @@ import (
 
 // sim is the simulated provider for development and demos without keys. It makes real (small)
 // files so every later step — adoption, preview, compose, MP4 download — runs for real.
-// A prompt containing 【模拟失败】 fails; 【模拟部分】 makes half of the images fail.
+// A prompt containing 【模拟失败】 fails; 【模拟部分】 makes half of the images fail; 【模拟未知】 leaves the result unknown.
 type sim struct{}
 
 const (
 	simFail    = "【模拟失败】"
 	simPartial = "【模拟部分】"
+	simUnknown = "【模拟未知】"
 )
 
 func (sim) Run(ctx context.Context, job Job) (Outcome, error) {
+	if strings.Contains(job.Input.Prompt+job.Input.Script+job.Input.Text, simUnknown) {
+		return Outcome{}, failure(ResultUnknown, "模拟结果未知：请求可能已经发给模型，但没收到回复")
+	}
 	if strings.Contains(job.Input.Prompt+job.Input.Script+job.Input.Text, simFail) {
 		return Outcome{}, failure("SIMULATED_FAILURE", "模拟失败：这是为了演示失败状态。去掉提示词里的「【模拟失败】」再试")
 	}

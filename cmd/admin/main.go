@@ -33,7 +33,7 @@ func main() {
 }
 
 func run(args []string) error {
-	usage := fmt.Errorf("usage: admin create-operator|create-demo <login> <display name>  (password on standard input)\n       admin set-password <login>  (password on standard input)\n       admin demo-reset <login>\n       admin import-content <file>\n       admin comic-grant <login> <amount> [note]")
+	usage := fmt.Errorf("usage: admin create-operator|create-demo <login> <display name>  (password on standard input)\n       admin set-password <login>  (password on standard input)\n       admin demo-reset <login>\n       admin import-content <file>\n       admin comic-grant <login> <amount> [note]\n       admin comic-settle <task id> charge|refund [note]  (结果待核对的任务：模型收到了就 charge，没收到就 refund)")
 	if len(args) == 0 {
 		return usage
 	}
@@ -98,6 +98,20 @@ func run(args []string) error {
 			return err
 		}
 		fmt.Printf("comic-grant: %s now has %d 创作点\n", args[1], balance)
+	case args[0] == "comic-settle" && (len(args) == 3 || len(args) == 4) && (args[2] == "charge" || args[2] == "refund"):
+		note := ""
+		if len(args) == 4 {
+			note = args[3]
+		}
+		db, err := connect()
+		if err != nil {
+			return err
+		}
+		defer db.Close()
+		if err := comic.SettleTask(ctx, db, args[1], args[2] == "charge", note); err != nil {
+			return err
+		}
+		fmt.Printf("comic-settle: %s %s\n", args[1], args[2])
 	case args[0] == "set-password" && len(args) == 2:
 		password, err := readPassword()
 		if err != nil {
