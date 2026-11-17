@@ -1,5 +1,20 @@
 # 会话交接
 
+## 2026-11-17：mac-air 本地 MiniMax 漫剧演示完成
+
+用户授权在 mac-air 本地演示，仅配置 MiniMax，不配置 Seedance。使用当前两个仓库的 main；没有提交或推送。
+
+- 本地入口：http://127.0.0.1:4173，Go 服务 127.0.0.1:4120。独立 PostgreSQL 17.12 集群/媒体/程序在 `~/.edu-comic-local/`，数据库只监听 127.0.0.1:55440，不使用线上库。
+- 密钥只在 `~/.edu-comic-keys/minimax`（0600）；同一文件供图片、视频、语音和文本使用。文本配置：`EDU_COMIC_TEXT_BASE=https://api.minimax.cn/v1`、`EDU_COMIC_TEXT_MODEL=MiniMax-M3`、`EDU_COMIC_TEXT_KEY_FILE` 指向上述文件。未配置方舟或 DeepSeek。
+- 本地后端重启：`~/.edu-comic-local/start.sh`。前端在客户端 `client/jiuwenswarm/channels/web/frontend` 执行 `npm run studio:local`。数据和成片已保留。
+- 修复 `comic-local.sh` 的 macOS `/bin/sh` 变量边界（未配置密钥时 `$file）` 被误读为变量名）；文本模型目录显示实际覆盖后的模型名；MiniMax-M3 解析关闭 thinking，避免额外思考开销。
+- 首次 MiniMax-M3.1-Flash 解析返回繁忙，预扣 2 点已退回；换 MiniMax-M3 后成功，不伪装为 DeepSeek。
+- 《纸飞机的约定》：1 角色/1 场景/1 道具，2 镜各 5 秒。真实完成解析、6 张资产候选、2 张首帧、2 句配音、2 段 H3 Highspeed 视频，合成带字幕版、无字幕版和 SRT。平台合计实扣 42 点，供应商实际费用以账单为准。
+- 原 ffmpeg 没有 libass；安装并仅在本地启动器 PATH 中优先使用 `ffmpeg-full`，用系统中文字体烧录字幕。成片 480×854、24 fps、10 秒、H.264/AAC，整段解码通过，截图检查中文字幕正常，浏览器播放到 00:10。
+- Chrome 的迅雷扩展接管并取消了浏览器下载；没有改动扩展设置。通过已登录本地 API 下载到 `~/Downloads/AI漫剧演示-纸飞机的约定/`，包括两个 MP4、SRT、工程备份。完整 GET 200、Range 206、无签名 403。
+- Mac 验证：`make check` 通过，使用独立 PostgreSQL 17 测试库（不是文档要求的 18 验收）；客户端 `test:edu-studio` 13/13 通过；Go 调整后再次 `make check` 通过；`git diff --check` 通过。
+- 未验：H3 标准版、音色定制、方舟、全宿主 WorkSwarm 流程；演示使用已有独立 studio-local 入口。COMIC-001 保留 in_progress。
+
 ## 2026-11-04：Go 后端上线 agent-api.hrtiger.cn
 
 - 用户授权，由 Mac 上的 Codex 部署（任务 ac5d7782），版本 `2ade9d0`：

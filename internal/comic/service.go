@@ -79,6 +79,9 @@ func New(db *pgxpool.Pool, cfg Config) (*Service, error) {
 		}
 		if m.Provider == "text" && cfg.TextModel != "" {
 			m.remote = cfg.TextModel
+			if cfg.TextModel != "deepseek-chat" {
+				m.Name = cfg.TextModel
+			}
 		}
 		_, m.Available = s.providers[m.Provider]
 		if !m.Available {
