@@ -207,7 +207,7 @@ func (s *Server) cors(w http.ResponseWriter, r *http.Request) bool {
 		return preflight
 	}
 	if preflight {
-		header.Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE")
+		header.Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE")
 		header.Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Idempotency-Key, If-Match, X-Client-Version")
 		header.Set("Access-Control-Max-Age", "600")
 	}

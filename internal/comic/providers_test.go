@@ -200,3 +200,11 @@ func TestSimBreakdownOfSampleScript(t *testing.T) {
 		t.Fatalf("props %+v %+v", b.Props, b.Shots[1].Props)
 	}
 }
+
+func TestBreakdownToleratesNumbersAndUnits(t *testing.T) {
+	b, err := readBreakdown("```json\n" + `{"characters":[{"name":"小林","fields":{"age":20,"gender":"男"},"prompt":"p"}],"scenes":[{"name":"长椅","fields":{"interior":false},"prompt":"p"}],"props":[],
+		"shots":[{"duration":"5秒","shot_size":"中景","action":"小林抬头","dialogue":[{"speaker":"小林","text":"你好"}],"characters":["小林"],"scene":"长椅","props":null,"image_prompt":"i","video_prompt":"v"}]}` + "\n```")
+	if err != nil || b.Characters[0].Fields["age"] != "20" || b.Scenes[0].Fields["interior"] != "false" || b.Shots[0].Duration != 5 || len(b.Shots[0].Dialogue) != 1 {
+		t.Fatalf("%v %+v", err, b)
+	}
+}

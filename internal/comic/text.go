@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 )
@@ -98,7 +101,7 @@ func (p *textModel) Run(ctx context.Context, job Job) (Outcome, error) {
 		return Outcome{}, failure("UNSUPPORTED", "这个模型不能做这一步")
 	}
 	body := map[string]any{
-		"model": job.Model.remote, "temperature": 0.4, "response_format": map[string]string{"type": "json_object"},
+		"model": job.Model.remote, "temperature": 0.4, "max_tokens": 8192, "response_format": map[string]string{"type": "json_object"},
 		"messages": []map[string]string{
 			{"role": "system", "content": "你是漫剧的编剧和分镜助手。" + breakdownSchema + "\n" + breakdownRules},
 			{"role": "user", "content": user.String()},
@@ -106,7 +109,8 @@ func (p *textModel) Run(ctx context.Context, job Job) (Outcome, error) {
 	}
 	var out struct {
 		Choices []struct {
-			Message struct {
+			FinishReason string `json:"finish_reason"`
+			Message      struct {
 				Content string `json:"content"`
 			} `json:"message"`
 		} `json:"choices"`
@@ -117,8 +121,12 @@ func (p *textModel) Run(ctx context.Context, job Job) (Outcome, error) {
 	if len(out.Choices) == 0 {
 		return Outcome{}, failure("PARSE_FAILED", "模型没有给出结果，请重试")
 	}
+	if out.Choices[0].FinishReason == "length" {
+		return Outcome{}, failure("PARSE_TOO_LONG", "剧本拆出的内容太多，模型没写完。请把镜头密度调成「精简」，或把剧本分成两集再解析")
+	}
 	b, err := readBreakdown(out.Choices[0].Message.Content)
 	if err != nil {
+		slog.Warn("comic breakdown unreadable", "service", "edu-agent-jiuwen-server", "finish", out.Choices[0].FinishReason, "length", len(out.Choices[0].Message.Content), "head", clip(out.Choices[0].Message.Content, 200))
 		return Outcome{}, err
 	}
 	return Outcome{Result: b}, nil
@@ -126,12 +134,17 @@ func (p *textModel) Run(ctx context.Context, job Job) (Outcome, error) {
 
 func (p *textModel) Check(context.Context, Job) (Outcome, error) { return Outcome{}, errNotAsync }
 
+// readBreakdown is lenient about scalars: models write "age": 20 or "duration": "5秒" as often as strings.
 func readBreakdown(content string) (Breakdown, error) {
 	content = strings.TrimSpace(content)
 	content = strings.TrimPrefix(strings.TrimPrefix(content, "```json"), "```")
 	content = strings.TrimSuffix(content, "```")
+	var raw any
+	if err := json.Unmarshal([]byte(content), &raw); err != nil {
+		return Breakdown{}, failure("PARSE_FAILED", "模型的拆解结果格式不对，请重试；剧本正文不受影响")
+	}
 	var b Breakdown
-	if err := json.Unmarshal([]byte(content), &b); err != nil {
+	if err := json.Unmarshal(loosen(raw, ""), &b); err != nil {
 		return b, failure("PARSE_FAILED", "模型的拆解结果格式不对，请重试；剧本正文不受影响")
 	}
 	b.normalize()
@@ -217,4 +230,35 @@ func (b *Breakdown) normalize() {
 		shots = append(shots, s)
 	}
 	b.Shots = shots
+}
+
+var leadingInt = regexp.MustCompile(`\d+`)
+
+// loosen rewrites scalars to the types Breakdown expects: duration becomes a number, every other scalar a string.
+func loosen(v any, key string) []byte {
+	var walk func(v any, key string) any
+	walk = func(v any, key string) any {
+		switch t := v.(type) {
+		case map[string]any:
+			for k, x := range t {
+				t[k] = walk(x, k)
+			}
+			return t
+		case []any:
+			for i, x := range t {
+				t[i] = walk(x, "")
+			}
+			return t
+		case nil:
+			return nil
+		}
+		text := strings.TrimSpace(fmt.Sprint(v))
+		if key == "duration" {
+			n, _ := strconv.Atoi(leadingInt.FindString(text))
+			return n
+		}
+		return text
+	}
+	out, _ := json.Marshal(walk(v, key))
+	return out
 }
