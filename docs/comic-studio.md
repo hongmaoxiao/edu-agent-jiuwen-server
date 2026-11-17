@@ -18,7 +18,7 @@
 | `internal/comic/minimax.go` | H3 视频（`/v2/video_generation`）、H3-Image（`/v1/images/generations`、`/edits`）、语音（`/v1/t2a_v2`）、音色设计（`/v1/voice_design`） |
 | `internal/comic/ark.go` | Seedance 2.0 / Fast（`/api/v3/contents/generations/tasks`）、Seedream 5.5（`/api/v3/images/generations`） |
 | `internal/comic/text.go` | 剧本解析与分镜：OpenAI 兼容接口（默认 DeepSeek），输出 JSON，服务端再规整 |
-| `internal/comic/compose.go` | ffmpeg 合成：裁剪、统一画幅、淡入淡出、原声/对白/配乐混音、内嵌或烧录字幕、H.264/AAC MP4 + SRT |
+| `internal/comic/compose.go` | ffmpeg 合成：按轨道排视频（裁剪、定格、空档补黑）、五类声音轨混音、对白期间压低音乐、响度调整和测量、内嵌或烧录字幕、H.264/AAC MP4 + SRT |
 | `internal/comic/sim.go` | 模拟供应商：`EDU_COMIC_SIMULATE=1` 时出现，生成真实的小文件，不扣点 |
 | `internal/gateway/comic.go` | `/v1/comic/*` 路由 |
 | `migrations/007_comic.sql` | `comic_projects`、`comic_tasks`、`comic_media`、`comic_ledger` |
@@ -87,6 +87,28 @@ Seedance 的价格是按官方 token 计价估算的，拿到真实账单后要�
   - 存为单独的媒体，target 是 `project/export/clean`，meta 里 `clean: true`。
   - 任务结果里的 `clean_media` 是它的媒体 id。
 
+## 多轨合成（V2 第 3 步）
+
+`compose` 任务的输入有两种格式，内部都转成轨道再渲染：
+
+- **多轨**（客户端现在只发这个）：`tracks: { video, audio, subtitles, duck }`。
+  - 视频片段：`media`、`start`（成片里的起点）、`in`/`out`（素材区间）、`hold`（末帧定格）、`volume`（原生声）、`fade_in`/`fade_out`。
+  - 视频片段按 `start` 排序，不能重叠，重叠返回 400 `CLIP_OVERLAP`；片段之间的空档补黑画面和静音。
+  - 声音片段多一个 `role`：`dialogue`、`narration`、`music`、`ambience`、`sfx`；`loop` 循环到成片结尾。超出成片结尾的截掉。
+  - `subtitles` 是成片时间的字幕条，≤ 200 字。
+- **旧格式**：`clips` 首尾相接，`lines` 变成对白片段和字幕，`bgm` 变成循环的音乐片段（结尾淡出 1.5 秒），`transition: fade` 变成 0.3 秒淡入淡出。
+
+规则：
+
+- 上限：视频 120 段、声音 300 段、字幕 300 条。
+- 校验：视频至少 0.2 秒、声音至少 0.05 秒；定格 ≤ 10 秒；淡入淡出 ≤ 10 秒；音量 0–2。
+- 循环：只有 `music`、`ambience` 可以 `loop`。视频和对白、旁白、音效带 `loop` 直接拒绝（400），不能悄悄循环素材来填缺口。
+- 压低：`duck`（-40…0 dB）作用在音乐轨，在对白、旁白片段的时间区间里按 `volume` 的 `enable` 表达式压低。区间是确定的，测试能直接量；没有起落斜坡。
+- 响度：`loudness`（-24…-10 LUFS）填了就用 `loudnorm` 调到目标；不管填没填，成片都再测一次。
+- 混音最后过 `alimiter` 防削波。
+- 成片说明 `manifest` 有这些字段：`duration_ms`、`clips`（视频段数）、`lines`（对白和旁白段数）、`audio_clips`、`subtitle_count`、`bgm`、`duck_db`、`loudness_target`、`loudness_lufs`、`true_peak_db`。静音成片测不出响度时，不写后两个字段。
+- 轨道的静音、独听由客户端处理：静音轨不发，独听只影响浏览器预览。服务端不知道这两个状态。
+
 ## 部署
 
 见 `deployments/production/server.env.example` 末尾的 `EDU_COMIC_*`，以及 `edu-agent-server.service` 的 `StateDirectory`、`agent-api.nginx.conf` 的 `/v1/comic/`。主机需要 `ffmpeg` 和 `ffprobe`，以及 libx264、libmp3lame。
@@ -94,4 +116,4 @@ Seedance 的价格是按官方 token 计价估算的，拿到真实账单后要�
 ## 验证
 
 - `go test ./internal/comic/` 不需要数据库：用假的 HTTP 服务核对 MiniMax 和方舟的请求格式、错误说明，以及模拟解析。
-- `internal/gateway/comic_test.go` 需要 PostgreSQL 和 ffmpeg，用模拟模型走完整链：解析 → 部分失败的生图 → 配音 → 首帧生视频 → 合成 MP4（Range 下载、签名防篡改），再验证扣点和退点、参数随模型变化、余额不足 402、版本冲突 409。
+- `internal/gateway/comic_test.go` 需要 PostgreSQL 和 ffmpeg，用模拟模型走完整链：解析 → 部分失败的生图 → 配音 → 首帧生视频 → 合成 MP4（Range 下载、签名防篡改）→ 多轨合成（空档、定格、旁白、字幕、压低，成片说明里有响度），再验证扣点和退点、参数随模型变化、余额不足 402、版本冲突 409。

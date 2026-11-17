@@ -152,6 +152,8 @@ func TestTracksCheck(t *testing.T) {
 		"duck up":     func(c *ComposeSpec) { c.Tracks.Duck = 3 },
 		"subtitle":    func(c *ComposeSpec) { c.Tracks.Subtitles = []Subtitle{{Start: 2, End: 1, Text: "x"}} },
 		"loudness":    func(c *ComposeSpec) { c.Loudness = -5 },
+		"video loop":  func(c *ComposeSpec) { c.Tracks.Video[0].Loop = true },
+		"voice loop":  func(c *ComposeSpec) { c.Tracks.Audio = []TrackClip{{Media: "a", Role: "dialogue", Loop: true}} },
 	} {
 		c := ok()
 		bad(c)
@@ -161,5 +163,13 @@ func TestTracksCheck(t *testing.T) {
 	}
 	if err := ok().check(); err != nil {
 		t.Fatal(err)
+	}
+	// 音乐和环境声可以循环。
+	for _, role := range []string{"music", "ambience"} {
+		c := ok()
+		c.Tracks.Audio = []TrackClip{{Media: "a", Role: role, Loop: true}}
+		if err := c.check(); err != nil {
+			t.Errorf("%s loop rejected: %v", role, err)
+		}
 	}
 }

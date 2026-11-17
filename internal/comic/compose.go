@@ -170,6 +170,9 @@ func (t *Tracks) check() error {
 			return rejectf("淡入淡出要在 0 到 10 秒之间")
 		case c.Volume != nil && (*c.Volume < 0 || *c.Volume > 2):
 			return rejectf("音量要在 0 到 2 之间")
+		case c.Loop && c.Role != "music" && c.Role != "ambience":
+			// 规格 V2：不能悄悄循环素材来填缺口，只有音乐和环境声可以铺满。
+			return rejectf("只有音乐和环境声可以循环，%s片段不能循环；长度不够请缩短、定帧或换素材", what)
 		}
 		return nil
 	}
