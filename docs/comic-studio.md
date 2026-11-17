@@ -22,6 +22,8 @@
 | `internal/comic/sim.go` | 模拟供应商：`EDU_COMIC_SIMULATE=1` 时出现，生成真实的小文件，不扣点 |
 | `internal/gateway/comic.go` | `/v1/comic/*` 路由 |
 | `migrations/007_comic.sql` | `comic_projects`、`comic_tasks`、`comic_media`、`comic_ledger` |
+| `migrations/008_comic_request_id.sql` | 提交去重用的 `comic_tasks.request_id` |
+| `scripts/comic-local.sh` | 本地演示：起数据库、迁移、建演示账号、读本机密钥文件、启动服务 |
 
 ## 规则
 
@@ -52,6 +54,25 @@
 - 合成：0 点。
 
 Seedance 的价格是按官方 token 计价估算的，拿到真实账单后要再核对。
+
+## 本地演示
+
+`scripts/comic-local.sh` 在本机起一个完整的漫剧服务端，网页用客户端仓库的 `npm run studio:local`。完整步骤见客户端仓库 `docs/ai-comic-studio/local-demo.md`。
+
+- 需要：Go、ffmpeg 和 ffprobe、Docker（用来起 PostgreSQL 18）。也可以不用 Docker：把 `DATABASE_URL` 指向一个空的 PostgreSQL 16 或更新版本的库。
+- 密钥：`~/.edu-comic-keys/` 下放 `minimax`、`ark`、`deepseek` 三个文件，每个文件只写密钥本身，权限 600。缺哪个，哪家模型就显示「暂不可用」。模拟模型一直都在。
+- 第一次运行时：建演示账号 `demo`，密码默认 `demo-password-1`，可以用 `EDU_DEMO_PASSWORD` 改。运营、学员、教师三个视角各加 1000 创作点。
+- 数据和媒体放在 `~/.edu-comic-local/`。PostgreSQL 容器叫 `edu-comic-pg`，数据卷同名。重跑脚本不会清掉数据。
+
+## 提交去重和清洁版
+
+- 提交任务可以带 `request_id`，最长 64 字符：
+  - 同一账号、同一 `request_id` 再提交，返回原来那个任务，状态码同样是 201，不再扣点。
+  - 客户端每次确认生成时新建一个 uuid。网络断开重发时复用同一个。
+- 合成的 `compose.clean=true` 且有字幕时，另出一份无字幕的清洁版：
+  - 同一条时间线、同一路声音，不收费。
+  - 存为单独的媒体，target 是 `project/export/clean`，meta 里 `clean: true`。
+  - 任务结果里的 `clean_media` 是它的媒体 id。
 
 ## 部署
 
