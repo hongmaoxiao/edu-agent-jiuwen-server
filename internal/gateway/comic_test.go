@@ -125,13 +125,13 @@ func TestComicStudioEndToEndWithSimulatedModels(t *testing.T) {
 	clip := video.body["media_ids"].([]any)[0].(string)
 
 	film := h.submit(token, project, map[string]any{"kind": "compose", "model": "compose", "target": "project/export", "label": "导出成片",
-		"input": map[string]any{"compose": map[string]any{"ratio": "9:16", "resolution": "480p", "clips": []any{map[string]any{"media": clip}, map[string]any{"media": clip, "in": 0.5}},
+		"input": map[string]any{"compose": map[string]any{"ratio": "9:16", "resolution": "480p", "clips": []any{map[string]any{"media": clip}, map[string]any{"media": clip, "in": 0.5, "hold": 1}},
 			"lines": []any{map[string]any{"media": line, "at": 0.5, "text": "这一次，我想试试。"}}, "subtitles": "soft", "transition": "fade"}}})
 	if film.str("status") != "succeeded" {
 		t.Fatalf("compose: %v", film.body)
 	}
 	manifest := film.body["result"].(map[string]any)["manifest"].(map[string]any)
-	if d := manifest["duration_ms"].(float64); d < 5000 || d > 6000 {
+	if d := manifest["duration_ms"].(float64); d < 6000 || d > 7000 {
 		t.Fatalf("film duration %v", d)
 	}
 

@@ -29,6 +29,7 @@ type Clip struct {
 	Media string  `json:"media"`
 	In    float64 `json:"in,omitempty"`
 	Out   float64 `json:"out,omitempty"`
+	Hold  float64 `json:"hold,omitempty"` // 定格末帧的秒数（配音比镜头长时用，不花点）
 	Shot  string  `json:"shot,omitempty"`
 }
 
@@ -79,6 +80,9 @@ func (c *ComposeSpec) check() error {
 	for _, cl := range c.Clips {
 		if cl.In < 0 || (cl.Out != 0 && cl.Out <= cl.In+0.2) {
 			return rejectf("镜头的裁剪范围不对（出点要比入点晚至少 0.2 秒）")
+		}
+		if cl.Hold < 0 || cl.Hold > 10 {
+			return rejectf("定格末帧最多 10 秒")
 		}
 	}
 	for _, l := range c.Lines {
@@ -138,7 +142,6 @@ func (lc localComposer) Run(ctx context.Context, job Job) (Outcome, error) {
 	var filters []string
 	var alabels []string
 	total := 0.0
-	starts := make([]float64, len(spec.Clips))
 	for i, cl := range spec.Clips {
 		f, ok := job.Files[cl.Media]
 		if !ok || f.Kind != "video" {
@@ -152,12 +155,14 @@ func (lc localComposer) Run(ctx context.Context, job Job) (Outcome, error) {
 		if cl.In >= out {
 			return Outcome{}, failure("CLIP_RANGE", fmt.Sprintf("第 %d 个镜头的裁剪范围超出了视频长度（%.1f 秒）", i+1, full))
 		}
-		d := out - cl.In
-		starts[i] = total
+		d := out - cl.In + cl.Hold
 		total += d
 		args = append(args, "-i", f.Path)
 		v := fmt.Sprintf("[%d:v]trim=start=%s:end=%s,setpts=PTS-STARTPTS,scale=%d:%d:force_original_aspect_ratio=decrease,pad=%d:%d:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=%d,format=yuv420p",
 			i, secs(cl.In), secs(out), w, h, w, h, spec.FPS)
+		if cl.Hold > 0 {
+			v += ",tpad=stop_mode=clone:stop_duration=" + secs(cl.Hold)
+		}
 		if fade && d > 1 {
 			v += fmt.Sprintf(",fade=t=in:st=0:d=0.3,fade=t=out:st=%s:d=0.3", secs(d-0.3))
 		}
