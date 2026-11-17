@@ -29,6 +29,8 @@ CapabilityBoundingSet=
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 # 连 broker 的 socket；前缀 - 表示 broker 还没起来时目录可以不存在。
 ReadWritePaths=-/run/edu-agent-broker
+# AI 漫剧的媒体文件（EDU_COMIC_MEDIA_DIR=/var/lib/edu-agent-server/comic），systemd 建目录并归 edu-agent 所有。
+StateDirectory=edu-agent-server
 
 [Install]
 WantedBy=multi-user.target
