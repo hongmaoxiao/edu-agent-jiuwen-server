@@ -3,6 +3,7 @@ package comic
 import (
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,6 +24,7 @@ type ComposeSpec struct {
 	BGM        string   `json:"bgm,omitempty"`
 	Volumes    *Volumes `json:"volumes,omitempty"`
 	Transition string   `json:"transition,omitempty"` // none | fade
+	Clean      bool     `json:"clean,omitempty"`      // 有字幕时另出一份无字幕的清洁版，同一时间轴和声音
 }
 
 type Clip struct {
@@ -215,6 +217,7 @@ func (lc localComposer) Run(ctx context.Context, job Job) (Outcome, error) {
 	if err := os.WriteFile(srtPath, []byte(srt), 0o600); err != nil {
 		return Outcome{}, err
 	}
+	plain := slices.Clone(filters)
 	videoOut := "[vcat]"
 	burned := false
 	if spec.Subtitles == "burn" && srt != "" && lc.font != "" {
@@ -230,21 +233,27 @@ func (lc localComposer) Run(ctx context.Context, job Job) (Outcome, error) {
 		burned = true
 	}
 	out := filepath.Join(job.Work, "film.mp4")
-	cmd := append([]string{"-v", "error", "-y"}, args...)
 	soft := spec.Subtitles != "none" && srt != "" && !burned
-	if soft {
-		cmd = append(cmd, "-i", srtPath)
-	}
-	cmd = append(cmd, "-filter_complex", strings.Join(filters, ";"), "-map", videoOut, "-map", audioOut)
-	if soft {
-		cmd = append(cmd, "-map", fmt.Sprintf("%d:s", input), "-c:s", "mov_text", "-metadata:s:s:0", "language=chi")
-	}
-	cmd = append(cmd, "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p", "-r", strconv.Itoa(spec.FPS),
-		"-c:a", "aac", "-b:a", "160k", "-ar", "44100", "-movflags", "+faststart", "-t", secs(total), out)
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
 	defer cancel()
-	if msg, err := exec.CommandContext(ctx, "ffmpeg", cmd...).CombinedOutput(); err != nil {
-		return Outcome{}, &Failure{Code: "COMPOSE_FAILED", Message: "合成失败：" + short(lastLine(string(msg))) + "。请检查片段后重试"}
+	encode := func(path, video string, graph []string, soft bool) error {
+		cmd := append([]string{"-v", "error", "-y"}, args...)
+		if soft {
+			cmd = append(cmd, "-i", srtPath)
+		}
+		cmd = append(cmd, "-filter_complex", strings.Join(graph, ";"), "-map", video, "-map", audioOut)
+		if soft {
+			cmd = append(cmd, "-map", fmt.Sprintf("%d:s", input), "-c:s", "mov_text", "-metadata:s:s:0", "language=chi")
+		}
+		cmd = append(cmd, "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p", "-r", strconv.Itoa(spec.FPS),
+			"-c:a", "aac", "-b:a", "160k", "-ar", "44100", "-movflags", "+faststart", "-t", secs(total), path)
+		if msg, err := exec.CommandContext(ctx, "ffmpeg", cmd...).CombinedOutput(); err != nil {
+			return &Failure{Code: "COMPOSE_FAILED", Message: "合成失败：" + short(lastLine(string(msg))) + "。请检查片段后重试"}
+		}
+		return nil
+	}
+	if err := encode(out, videoOut, filters, soft); err != nil {
+		return Outcome{}, err
 	}
 	manifest := map[string]any{"width": w, "height": h, "ratio": spec.Ratio, "resolution": spec.Resolution, "fps": spec.FPS,
 		"duration_ms": int(total * 1000), "clips": len(spec.Clips), "lines": len(spec.Lines), "subtitles": subtitleMode(spec.Subtitles, burned, srt != ""),
@@ -255,6 +264,16 @@ func (lc localComposer) Run(ctx context.Context, job Job) (Outcome, error) {
 	files := []Produced{{Path: out, Ext: "mp4", Kind: "video", Meta: map[string]any{"manifest": manifest}}}
 	if srt != "" {
 		files = append(files, Produced{Path: srtPath, Ext: "srt", Kind: "subtitle"})
+	}
+	if spec.Clean && (burned || soft) {
+		clean := filepath.Join(job.Work, "film-clean.mp4")
+		if err := encode(clean, "[vcat]", plain, false); err != nil {
+			return Outcome{}, err
+		}
+		cm := maps.Clone(manifest)
+		cm["subtitles"] = "none"
+		delete(cm, "subtitles_note")
+		files = append(files, Produced{Path: clean, Ext: "mp4", Kind: "video", Meta: map[string]any{"clean": true, "manifest": cm}})
 	}
 	return Outcome{Files: files, Result: map[string]any{"manifest": manifest}}, nil
 }

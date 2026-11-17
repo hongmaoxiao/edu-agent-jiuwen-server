@@ -102,6 +102,8 @@ type Submission struct {
 	Target string `json:"target"`
 	Label  string `json:"label"`
 	Input  Input  `json:"input"`
+	// RequestID 由客户端每次确认生成时新建，重试同一次请求时复用：同一账号同一 RequestID 只建一个任务、只扣一次点。
+	RequestID string `json:"request_id,omitempty"`
 }
 
 func (s *Service) prepare(sub *Submission) (*Model, int, error) {
@@ -136,8 +138,8 @@ func (s *Service) Submit(ctx context.Context, r account.Roles, projectID string,
 	if _, err := s.project(ctx, r, projectID); err != nil {
 		return Task{}, err
 	}
-	if len(sub.Target) > 200 || len([]rune(sub.Label)) > 80 {
-		return Task{}, rejectf("target 或 label 太长")
+	if len(sub.Target) > 200 || len([]rune(sub.Label)) > 80 || len(sub.RequestID) > 64 {
+		return Task{}, rejectf("target、label 或 request_id 太长")
 	}
 	// 引用的媒体必须属于这个项目。
 	refs := append(slices.Clone(sub.Input.Refs), sub.Input.FirstFrame)
@@ -162,6 +164,16 @@ func (s *Service) Submit(ctx context.Context, r account.Roles, projectID string,
 		if _, err := tx.Exec(ctx, "SELECT pg_advisory_xact_lock(hashtext('comic-credits:' || $1))", r.AccountID); err != nil {
 			return err
 		}
+		// 同一次请求重发（网络超时后重试、连点）：返回已有任务，不再扣点。按账号加锁后再查，并发重发也只建一个。
+		if sub.RequestID != "" {
+			err := tx.QueryRow(ctx, "SELECT id FROM comic_tasks WHERE account_id=$1 AND request_id=$2", r.AccountID, sub.RequestID).Scan(&id)
+			if err == nil {
+				return nil
+			}
+			if !errors.Is(err, pgx.ErrNoRows) {
+				return err
+			}
+		}
 		balance, err := balanceOf(ctx, tx, r.AccountID)
 		if err != nil {
 			return err
@@ -169,8 +181,8 @@ func (s *Service) Submit(ctx context.Context, r account.Roles, projectID string,
 		if cost > balance {
 			return fmt.Errorf("%w: 创作点不足：这次需要 %d，余额 %d。请找老师加额度", ErrCredits, cost, balance)
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO comic_tasks(id,account_id,project_id,kind,target,label,provider,model,input,estimate,simulated)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, id, r.AccountID, projectID, sub.Kind, sub.Target, strings.TrimSpace(sub.Label), m.Provider, m.ID, input, cost, m.Simulated); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO comic_tasks(id,account_id,project_id,kind,target,label,provider,model,input,estimate,simulated,request_id)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NULLIF($12,''))`, id, r.AccountID, projectID, sub.Kind, sub.Target, strings.TrimSpace(sub.Label), m.Provider, m.ID, input, cost, m.Simulated, sub.RequestID); err != nil {
 			return err
 		}
 		if cost > 0 {
@@ -422,7 +434,11 @@ func (s *Service) complete(ctx context.Context, c claimed, m *Model, job Job, ou
 		if m.Simulated {
 			p.Meta["simulated"] = true
 		}
-		md, err := s.save(ctx, c.accountID, c.projectID, &taskID, c.target, origin, p, job.Work)
+		target := c.target
+		if p.Meta["clean"] == true {
+			target += "/clean" // 无字幕清洁版不算新的导出版本
+		}
+		md, err := s.save(ctx, c.accountID, c.projectID, &taskID, target, origin, p, job.Work)
 		if err != nil {
 			slog.Error("comic media save failed", "service", "edu-agent-jiuwen-server", "kind", c.kind, "error", err.Error())
 			for _, done := range saved {
@@ -435,13 +451,16 @@ func (s *Service) complete(ctx context.Context, c claimed, m *Model, job Job, ou
 	}
 	result := out.Result
 	if c.kind == KindCompose {
-		r := map[string]any{"manifest": nil, "srt_media": nil}
+		r := map[string]any{"manifest": nil, "srt_media": nil, "clean_media": nil}
 		if mm, ok := out.Result.(map[string]any); ok {
 			r["manifest"] = mm["manifest"]
 		}
 		for _, md := range saved {
 			if md.Kind == "subtitle" {
 				r["srt_media"] = md.ID
+			}
+			if md.Target == c.target+"/clean" {
+				r["clean_media"] = md.ID
 			}
 		}
 		result = r

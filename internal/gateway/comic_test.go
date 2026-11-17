@@ -126,7 +126,7 @@ func TestComicStudioEndToEndWithSimulatedModels(t *testing.T) {
 
 	film := h.submit(token, project, map[string]any{"kind": "compose", "model": "compose", "target": "project/export", "label": "导出成片",
 		"input": map[string]any{"compose": map[string]any{"ratio": "9:16", "resolution": "480p", "clips": []any{map[string]any{"media": clip}, map[string]any{"media": clip, "in": 0.5, "hold": 1}},
-			"lines": []any{map[string]any{"media": line, "at": 0.5, "text": "这一次，我想试试。"}}, "subtitles": "soft", "transition": "fade"}}})
+			"lines": []any{map[string]any{"media": line, "at": 0.5, "text": "这一次，我想试试。"}}, "subtitles": "soft", "transition": "fade", "clean": true}}})
 	if film.str("status") != "succeeded" {
 		t.Fatalf("compose: %v", film.body)
 	}
@@ -135,11 +135,19 @@ func TestComicStudioEndToEndWithSimulatedModels(t *testing.T) {
 		t.Fatalf("film duration %v", d)
 	}
 
+	// 勾了清洁版：另存一份不算导出版本的无字幕 MP4。
+	cleanID, _ := film.body["result"].(map[string]any)["clean_media"].(string)
+	if cleanID == "" {
+		t.Fatalf("no clean film: %v", film.body["result"])
+	}
 	full := h.do("GET", "/v1/comic/projects/"+project, token, nil, nil)
 	var mp4 string
 	for _, m := range full.body["media"].([]any) {
 		m := m.(map[string]any)
-		if m["origin"] == "compose" && m["kind"] == "video" {
+		if m["id"] == cleanID && m["target"] != "project/export/clean" {
+			t.Fatalf("clean film target %v", m["target"])
+		}
+		if m["origin"] == "compose" && m["kind"] == "video" && m["target"] == "project/export" {
 			mp4 = m["url"].(string)
 			if m["width"].(float64) != 480 || m["height"].(float64) != 854 {
 				t.Fatalf("film size %vx%v", m["width"], m["height"])
@@ -189,6 +197,18 @@ func TestComicCreditsChargeRefundAndLimits(t *testing.T) {
 	}
 	if l := h.do("GET", "/v1/comic/ledger", token, nil, nil); l.body["balance"].(float64) != 96 {
 		t.Fatalf("balance after partial + failure: %v", l.body["balance"])
+	}
+	// 同一 request_id 重发（超时重试、连点）：返回同一个任务，只扣一次。
+	again := image("ok", 1)
+	again["request_id"] = "req-1"
+	first := h.do("POST", "/v1/comic/projects/"+project+"/tasks", token, again, nil)
+	second := h.do("POST", "/v1/comic/projects/"+project+"/tasks", token, again, nil)
+	if first.code != 201 || second.code != 201 || first.str("id") != second.str("id") {
+		t.Fatalf("repeated request: %d %v / %d %v", first.code, first.body, second.code, second.body)
+	}
+	h.waitTask(token, first.str("id"))
+	if l := h.do("GET", "/v1/comic/ledger", token, nil, nil); l.body["balance"].(float64) != 92 {
+		t.Fatalf("balance after a repeated request: %v", l.body["balance"])
 	}
 	// 参数随模型：Seedance Fast 不能选 1080p；没配密钥的模型不可用。
 	bad := h.do("POST", "/v1/comic/estimate", token, map[string]any{"kind": "video", "model": "minimax-h3-highspeed",
