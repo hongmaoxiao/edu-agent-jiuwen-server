@@ -77,7 +77,8 @@
       ],
       "acceptance": "Mac 上 make check 通过（含 comic_test.go）；真实密钥下每个模型最小冒烟一次（最短时长、最低分辨率）并核对扣点；浏览器从新剧本走到下载 MP4",
       "evidence": [
-        "2026-11-17 Grok 本地 PostgreSQL 16.4：go vet 通过，全部测试 PASS（comic 端到端用模拟模型到 MP4、扣退点、402/409、供应商请求格式）；真实 DeepSeek 解析《迟到的纸飞机》成功（3 镜、台词与说话人正确，扣 2 点）。尚未在 Mac 上验证，MiniMax/方舟待密钥。"
+        "2026-11-17 Grok 本地 PostgreSQL 16.4：go vet 通过，全部测试 PASS（comic 端到端用模拟模型到 MP4、扣退点、402/409、供应商请求格式）；真实 DeepSeek 解析《迟到的纸飞机》成功（3 镜、台词与说话人正确，扣 2 点）。尚未在 Mac 上验证，MiniMax/方舟待密钥。",
+        "2026-11-17 Grok 上用 zonky PostgreSQL 18.6（与线上同版本）跑 make check 等价步骤：go vet、CGO_ENABLED=0 go test -count=1 ./... 全过、gofmt 与 git diff --check 干净（af048ed）。浏览器跨域全流程（DeepSeek 真实解析 + 模拟生图/配音/视频 + 合成 MP4）走通；假密钥调用 MiniMax/方舟得到「密钥无效，已退回」。客户端 edu_course Python 测试 16 项通过。仍缺：真实 MiniMax/方舟密钥冒烟、Mac 浏览器验收。"
       ]
     }
   ]
