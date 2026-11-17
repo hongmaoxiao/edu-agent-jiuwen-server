@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"edu-agent-jiuwen-server/internal/account"
+	"edu-agent-jiuwen-server/internal/comic"
 	"edu-agent-jiuwen-server/internal/platform"
 	"edu-agent-jiuwen-server/internal/teaching"
 	"edu-agent-jiuwen-server/internal/workspace"
@@ -33,6 +34,8 @@ type Server struct {
 	// workspaces is nil until WithWorkspaces: then POST /v1/workspace answers 503.
 	workspaces *workspace.Service
 	teaching   *teaching.Service
+	// comic is nil until WithComic (EDU_COMIC_MEDIA_DIR unset): /v1/comic answers 503.
+	comic *comic.Service
 }
 
 func New(config platform.Config, db *pgxpool.Pool) *Server {
@@ -46,6 +49,7 @@ func New(config platform.Config, db *pgxpool.Pool) *Server {
 	s.registerClasses()
 	s.registerWorkspace()
 	s.registerTeaching()
+	s.registerComic()
 	return s
 }
 
@@ -99,6 +103,10 @@ func fail(w http.ResponseWriter, r *http.Request, err error) {
 		writeError(w, 404, "NOT_FOUND", "要找的内容不存在")
 	case errors.Is(err, account.ErrConflict):
 		writeError(w, 409, "CONFLICT", message("和已有数据冲突"))
+	case errors.Is(err, comic.ErrCredits):
+		writeError(w, 402, "INSUFFICIENT_CREDITS", message("创作点不足"))
+	case errors.Is(err, errComicOff):
+		writeError(w, 503, "COMIC_DISABLED", "AI 漫剧还没有在平台上开启")
 	default:
 		slog.Error("request failed", "service", "edu-agent-jiuwen-server", "route", r.Pattern, "error", err.Error())
 		writeError(w, 503, "UNAVAILABLE", "服务暂时不可用，请稍后重试")

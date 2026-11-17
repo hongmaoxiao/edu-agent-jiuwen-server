@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"edu-agent-jiuwen-server/internal/comic"
 	"edu-agent-jiuwen-server/internal/gateway"
 	"edu-agent-jiuwen-server/internal/platform"
 	"edu-agent-jiuwen-server/internal/workspace"
@@ -35,6 +36,19 @@ func main() {
 	gateway.RegisterDBMetrics(db)
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	if config.ComicMediaDir != "" {
+		studio, err := comic.New(db, comic.Config{
+			MediaDir: config.ComicMediaDir, InitialCredits: config.ComicInitialCredits, Simulate: config.ComicSimulate,
+			MiniMaxBase: config.ComicMiniMaxBase, MiniMaxKey: config.ComicMiniMaxKey, ArkBase: config.ComicArkBase, ArkKey: config.ComicArkKey,
+			TextBase: config.ComicTextBase, TextKey: config.ComicTextKey, TextModel: config.ComicTextModel, SubtitleFont: config.ComicSubtitleFont,
+		})
+		if err != nil {
+			slog.Error("comic studio rejected", "reason", err.Error())
+			os.Exit(1)
+		}
+		app.WithComic(studio)
+		go studio.Run(ctx)
+	}
 	if config.WorkspaceBroker != "" {
 		workspaces := workspace.New(db, workspace.NewSocketBroker(config.WorkspaceBroker), workspace.Config{
 			FirstPort: config.WorkspaceFirstPort, LastPort: config.WorkspaceLastPort, Limit: config.WorkspaceLimit,
