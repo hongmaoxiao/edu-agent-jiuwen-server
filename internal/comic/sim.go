@@ -189,7 +189,7 @@ func simTone(ctx context.Context, work string, seconds, freq float64) ([]byte, e
 
 var (
 	reShot   = regexp.MustCompile(`镜头\s*(\d+)\s*[，,]\s*(\d+)\s*秒\s*[：:]\s*(.+)`)
-	reSpeech = regexp.MustCompile(`([\p{Han}A-Za-z]{1,6})(?:轻声|小声|大声|笑着|微笑|低声)?说\s*[：:]\s*[“"「]([^”"」]+)[”"」]`)
+	reSpeech = regexp.MustCompile(`说\s*[：:]\s*[“"「]([^”"」]+)[”"」]`)
 	reShotSz = regexp.MustCompile(`^(远景|全景|中景|近景|特写)[，,：:]?`)
 )
 
@@ -225,8 +225,15 @@ func simBreakdown(in Input) Breakdown {
 					s.ShotSize = sz[1]
 					s.Action = strings.TrimSpace(strings.TrimPrefix(m[3], sz[0]))
 				}
-				for _, sp := range reSpeech.FindAllStringSubmatch(m[3], -1) {
-					s.Dialogue = append(s.Dialogue, Line{Speaker: sp[1], Text: sp[2]})
+				// 说话人：引号前面最近提到的角色。
+				for _, at := range reSpeech.FindAllStringSubmatchIndex(m[3], -1) {
+					speaker, best := "", -1
+					for _, c := range b.Characters {
+						if i := strings.LastIndex(m[3][:at[0]], c.Name); i > best {
+							speaker, best = c.Name, i
+						}
+					}
+					s.Dialogue = append(s.Dialogue, Line{Speaker: speaker, Text: m[3][at[2]:at[3]]})
 				}
 				if strings.Contains(m[3], "跟随") {
 					s.Camera = "跟"
