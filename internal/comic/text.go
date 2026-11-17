@@ -27,6 +27,8 @@ type Asset struct {
 	Fields map[string]string `json:"fields"`
 	Prompt string            `json:"prompt"` // 出图用的外观描述（不含画风）
 	Voice  string            `json:"voice,omitempty"`
+	// Aliases 是剧本里对同一角色的其他称呼（如「林同学」）；台词说话人用主名。
+	Aliases []string `json:"aliases,omitempty"`
 }
 
 type Shot struct {
@@ -45,6 +47,9 @@ type Shot struct {
 type Line struct {
 	Speaker string `json:"speaker"`
 	Text    string `json:"text"`
+	// 剧本没写明谁说的：Speaker 留空，SpeakerGuess 是推测，由人确认，不自动分配。
+	SpeakerUncertain bool   `json:"speaker_uncertain,omitempty"`
+	SpeakerGuess     string `json:"speaker_guess,omitempty"`
 }
 
 var assetFields = map[string][]string{
@@ -55,10 +60,10 @@ var assetFields = map[string][]string{
 
 const breakdownSchema = `输出一个 JSON 对象，结构如下（只输出 JSON，不要解释）：
 {
-  "characters": [{"name": "角色名", "fields": {"identity": "身份", "age": "年龄（数字或描述）", "gender": "性别", "personality": "性格", "speech": "说话方式", "appearance": "五官与体型", "hair": "发型发色", "outfit": "服装", "concept": "设计理念，一两句"}, "prompt": "用于生成全身立绘的外观描述，一段话，不写画风", "voice": "适合的声音，如：青年男声，温和略迟疑"}],
+  "characters": [{"name": "角色名", "fields": {"identity": "身份", "age": "年龄（数字或描述）", "gender": "性别", "personality": "性格", "speech": "说话方式", "appearance": "五官与体型", "hair": "发型发色", "outfit": "服装", "concept": "设计理念，一两句"}, "prompt": "用于生成全身立绘的外观描述，一段话，不写画风", "voice": "适合的声音，如：青年男声，温和略迟疑", "aliases": ["剧本里对这个角色的其他称呼，没有就空数组"]}],
   "scenes": [{"name": "场景名", "fields": {"location": "地点", "interior": "内景或外景", "time": "时间", "season": "季节", "lighting": "光线", "composition": "构图", "mood": "氛围"}, "prompt": "用于生成空镜场景图的描述，不出现人物，不写画风"}],
   "props": [{"name": "道具名", "fields": {"material": "材质", "color": "颜色", "size": "尺寸", "shape": "形状", "texture": "质感"}, "prompt": "用于生成道具单品图的描述，不写画风"}],
-  "shots": [{"duration": 5, "shot_size": "景别（远景/全景/中景/近景/特写）", "camera": "运镜（固定/推/拉/摇/移/跟）", "action": "画面里发生什么", "dialogue": [{"speaker": "角色名", "text": "台词原文"}], "characters": ["出场角色名"], "scene": "场景名", "props": ["道具名"], "image_prompt": "这一镜第一帧的静态画面描述", "video_prompt": "这一镜的动态描述：人物动作、表情、运镜，有台词时写明谁说了什么"}]
+  "shots": [{"duration": 5, "shot_size": "景别（远景/全景/中景/近景/特写）", "camera": "运镜（固定/推/拉/摇/移/跟）", "action": "画面里发生什么", "dialogue": [{"speaker": "角色主名", "text": "台词原文", "speaker_uncertain": false, "speaker_guess": ""}], "characters": ["出场角色名"], "scene": "场景名", "props": ["道具名"], "image_prompt": "这一镜第一帧的静态画面描述", "video_prompt": "这一镜的动态描述：人物动作、表情、运镜，有台词时写明谁说了什么"}]
 }`
 
 const breakdownRules = `规则：
@@ -67,7 +72,9 @@ const breakdownRules = `规则：
 3. 每镜时长是 2 到 15 的整数秒。
 4. 台词照抄剧本原文；没有台词的镜头 dialogue 为空数组。
 5. 剧本写明人物是成年人的，描述里保持成年人的外貌。
-6. 所有提示词都用中文，不写画风（画风由平台统一加）。`
+6. 所有提示词都用中文，不写画风（画风由平台统一加）。
+7. 同一个人在剧本里有几种称呼（如「小林」和「林同学」）时只建一个角色，其他称呼写进 aliases；台词的 speaker 和镜头的 characters 都用主名。
+8. 剧本没写明是谁说的台词：speaker 留空，speaker_uncertain 写 true，speaker_guess 写最可能的角色主名；不要替剧本决定说话人。旁白的 speaker 写「旁白」。`
 
 var densityGuide = map[string]string{
 	"精简": "镜头尽量少，每镜 5 秒左右，只保留推动情节的画面。",
@@ -184,6 +191,13 @@ func (b *Breakdown) normalize() {
 				}
 			}
 			a.Fields, a.Prompt, a.Voice = fields, clip(a.Prompt, 1000), clip(a.Voice, 60)
+			var aliases []string
+			for _, n := range a.Aliases {
+				if n = clip(n, 20); n != "" && n != a.Name && !slices.Contains(aliases, n) && len(aliases) < 5 {
+					aliases = append(aliases, n)
+				}
+			}
+			a.Aliases = aliases
 			out = append(out, a)
 		}
 		return out
@@ -199,10 +213,26 @@ func (b *Breakdown) normalize() {
 		return out
 	}
 	characters, scenes, props := names(b.Characters), names(b.Scenes), names(b.Props)
+	// 别名 → 主名：模型偶尔在台词和出场里用别名，统一成主名。别名和别的角色重名时以角色为准。
+	canonical := map[string]string{}
+	for _, c := range b.Characters {
+		for _, n := range c.Aliases {
+			if !slices.Contains(characters, n) {
+				canonical[n] = c.Name
+			}
+		}
+	}
+	canon := func(n string) string {
+		n = strings.TrimSpace(n)
+		if c, ok := canonical[n]; ok {
+			return c
+		}
+		return n
+	}
 	keep := func(list []string, known []string) []string {
 		out := []string{}
 		for _, n := range list {
-			if n = strings.TrimSpace(n); slices.Contains(known, n) && !slices.Contains(out, n) {
+			if n = canon(n); slices.Contains(known, n) && !slices.Contains(out, n) {
 				out = append(out, n)
 			}
 		}
@@ -223,7 +253,14 @@ func (b *Breakdown) normalize() {
 		lines := []Line{}
 		for _, l := range s.Dialogue {
 			if l.Text = clip(l.Text, 300); l.Text != "" {
-				l.Speaker = strings.TrimSpace(l.Speaker)
+				l.Speaker, l.SpeakerGuess = canon(l.Speaker), canon(l.SpeakerGuess)
+				if l.SpeakerUncertain || l.Speaker == "" && l.SpeakerGuess != "" {
+					// 没写明说话人：不分配，只留认得出的推测。
+					l.SpeakerUncertain, l.Speaker = true, ""
+				}
+				if !slices.Contains(characters, l.SpeakerGuess) {
+					l.SpeakerGuess = ""
+				}
 				lines = append(lines, l)
 			}
 		}
@@ -260,6 +297,9 @@ func loosen(v any, key string) []byte {
 		if key == "duration" {
 			n, _ := strconv.Atoi(leadingInt.FindString(text))
 			return n
+		}
+		if key == "speaker_uncertain" {
+			return text == "true" || text == "1" || text == "是"
 		}
 		return text
 	}

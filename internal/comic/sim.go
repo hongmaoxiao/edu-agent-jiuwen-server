@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -195,12 +196,14 @@ var (
 	reShot   = regexp.MustCompile(`镜头\s*(\d+)\s*[，,]\s*(\d+)\s*秒\s*[：:]\s*(.+)`)
 	reSpeech = regexp.MustCompile(`说\s*[：:]\s*[“"「]([^”"」]+)[”"」]`)
 	reShotSz = regexp.MustCompile(`^(远景|全景|中景|近景|特写)[，,：:]?`)
+	reAlias  = regexp.MustCompile(`^(.+?)[（(](?:又名|别名|也叫|又称)?([^）)]+)[）)]$`)
 )
 
 // simBreakdown splits a script written as 人物：…；场景：…；镜头N，M秒：… lines. Anything else becomes
 // one character, one scene and up to three shots, which is enough to walk through the workflow.
 func simBreakdown(in Input) Breakdown {
 	var b Breakdown
+	last := "" // 上一句台词的说话人
 	for _, raw := range strings.Split(in.Script, "\n") {
 		line := strings.TrimSpace(raw)
 		switch {
@@ -209,11 +212,17 @@ func simBreakdown(in Input) Breakdown {
 			for _, part := range strings.FieldsFunc(body, func(r rune) bool { return r == '；' || r == ';' }) {
 				name, desc, _ := strings.Cut(strings.TrimSpace(part), "，")
 				name = strings.TrimRight(name, "。")
+				// 「小林（又名林同学）」：括号里是别名。
+				var aliases []string
+				if m := reAlias.FindStringSubmatch(name); m != nil {
+					name = strings.TrimSpace(m[1])
+					aliases = strings.FieldsFunc(m[2], func(r rune) bool { return r == '、' || r == '/' })
+				}
 				if name == "" {
 					continue
 				}
 				desc = strings.TrimRight(desc, "。")
-				b.Characters = append(b.Characters, Asset{Name: name, Prompt: name + "，" + desc + "，全身立绘，正面站姿，纯色背景",
+				b.Characters = append(b.Characters, Asset{Name: name, Aliases: aliases, Prompt: name + "，" + desc + "，全身立绘，正面站姿，纯色背景",
 					Fields: map[string]string{"appearance": desc, "outfit": pick(desc, "外套", "衫", "衣", "裙"), "hair": pick(desc, "发")}, Voice: "青年，自然"})
 			}
 		case strings.HasPrefix(line, "场景"):
@@ -229,15 +238,22 @@ func simBreakdown(in Input) Breakdown {
 					s.ShotSize = sz[1]
 					s.Action = strings.TrimSpace(strings.TrimPrefix(m[3], sz[0]))
 				}
-				// 说话人：引号前面最近提到的角色。
+				// 说话人：引号前面最近提到的角色（含别名）；前面没提到人的，不分配，推测是上一句的说话人。
 				for _, at := range reSpeech.FindAllStringSubmatchIndex(m[3], -1) {
 					speaker, best := "", -1
 					for _, c := range b.Characters {
-						if i := strings.LastIndex(m[3][:at[0]], c.Name); i > best {
-							speaker, best = c.Name, i
+						for _, n := range append([]string{c.Name}, c.Aliases...) {
+							if i := strings.LastIndex(m[3][:at[0]], n); i > best {
+								speaker, best = c.Name, i
+							}
 						}
 					}
-					s.Dialogue = append(s.Dialogue, Line{Speaker: speaker, Text: m[3][at[2]:at[3]]})
+					line := Line{Speaker: speaker, Text: m[3][at[2]:at[3]]}
+					if speaker == "" {
+						line.SpeakerUncertain, line.SpeakerGuess = true, last
+					}
+					last = speaker
+					s.Dialogue = append(s.Dialogue, line)
 				}
 				if strings.Contains(m[3], "跟随") {
 					s.Camera = "跟"
@@ -274,7 +290,7 @@ func simBreakdown(in Input) Breakdown {
 	for i := range b.Shots {
 		s := &b.Shots[i]
 		for _, c := range b.Characters {
-			if strings.Contains(s.Action, c.Name) || strings.Contains(s.Action, "两人") {
+			if strings.Contains(s.Action, c.Name) || strings.Contains(s.Action, "两人") || slices.ContainsFunc(c.Aliases, func(n string) bool { return strings.Contains(s.Action, n) }) {
 				s.Characters = append(s.Characters, c.Name)
 			}
 		}

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -198,6 +199,42 @@ func TestSimBreakdownOfSampleScript(t *testing.T) {
 	}
 	if len(b.Props) != 1 || b.Props[0].Name != "白色纸飞机" || len(b.Shots[1].Props) != 1 || b.Shots[1].Dialogue[0].Speaker != "阿宁" {
 		t.Fatalf("props %+v %+v", b.Props, b.Shots[1].Props)
+	}
+}
+
+// 人物行括号里写别名；台词前面没提到人的不分配，只给推测。
+func TestSimBreakdownAliasAndUnsureSpeaker(t *testing.T) {
+	b := simBreakdown(Input{Script: "人物：小林（又名林同学），短黑发；阿宁，绿色针织衫。\n场景：傍晚校园。\n镜头1，5秒：中景，阿宁说：“你来啦。”\n镜头2，5秒：近景，林同学点头，说：“嗯。”\n镜头3，5秒：特写，说：“这是写给我的？”"})
+	if len(b.Characters) != 2 || b.Characters[0].Name != "小林" || len(b.Characters[0].Aliases) != 1 || b.Characters[0].Aliases[0] != "林同学" {
+		t.Fatalf("characters %+v", b.Characters)
+	}
+	if l := b.Shots[1].Dialogue[0]; l.Speaker != "小林" || l.SpeakerUncertain || !slices.Contains(b.Shots[1].Characters, "小林") {
+		t.Fatalf("alias line %+v %v", l, b.Shots[1].Characters)
+	}
+	if l := b.Shots[2].Dialogue[0]; l.Speaker != "" || !l.SpeakerUncertain || l.SpeakerGuess != "小林" {
+		t.Fatalf("unsure line %+v", l)
+	}
+}
+
+// 模型在台词里用了别名：统一成主名；没写明说话人的不分配；推测不是已知角色就不留。
+func TestBreakdownResolvesAliasesAndKeepsUnsureSpeakers(t *testing.T) {
+	b, err := readBreakdown(`{"characters":[{"name":"小林","prompt":"p","aliases":["林同学","小林"," "]},{"name":"阿宁","prompt":"p"}],"scenes":[],"props":[],
+		"shots":[{"duration":5,"action":"a","characters":["林同学"],"dialogue":[{"speaker":"林同学","text":"嗯"},{"speaker":"阿宁","text":"?","speaker_uncertain":true,"speaker_guess":"阿宁"},{"speaker":"","text":"!","speaker_guess":"路人"}]}]}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := b.Characters[0].Aliases; len(got) != 1 || got[0] != "林同学" {
+		t.Fatalf("aliases %v", got)
+	}
+	d := b.Shots[0].Dialogue
+	if b.Shots[0].Characters[0] != "小林" || d[0].Speaker != "小林" || d[0].SpeakerUncertain {
+		t.Fatalf("alias not resolved: %+v %v", d[0], b.Shots[0].Characters)
+	}
+	if d[1].Speaker != "" || !d[1].SpeakerUncertain || d[1].SpeakerGuess != "阿宁" {
+		t.Fatalf("unsure kept: %+v", d[1])
+	}
+	if d[2].Speaker != "" || !d[2].SpeakerUncertain || d[2].SpeakerGuess != "" {
+		t.Fatalf("unknown guess dropped: %+v", d[2])
 	}
 }
 
