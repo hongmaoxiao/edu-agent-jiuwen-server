@@ -12,7 +12,7 @@ PORT=${EDU_COMIC_PORT:-4120}
 WEB=${EDU_COMIC_WEB_PORT:-4173}
 
 for tool in go ffmpeg ffprobe; do
-  command -v "$tool" >/dev/null 2>&1 || { echo "缺少 $tool。macOS：brew install go ffmpeg" >&2; exit 1; }
+  command -v "$tool" >/dev/null 2>&1 || { echo "缺少 ${tool}。macOS：brew install go ffmpeg" >&2; exit 1; }
 done
 mkdir -p "$DATA/bin" "$DATA/media" "$KEYS"
 
