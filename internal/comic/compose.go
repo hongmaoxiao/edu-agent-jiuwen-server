@@ -218,8 +218,12 @@ func (lc localComposer) Run(ctx context.Context, job Job) (Outcome, error) {
 	videoOut := "[vcat]"
 	burned := false
 	if spec.Subtitles == "burn" && srt != "" && lc.font != "" {
-		style := fmt.Sprintf("FontName=%s,FontSize=%d,PrimaryColour=&H00FFFFFF,OutlineColour=&H80000000,BorderStyle=1,Outline=2,Shadow=0,MarginV=%d",
-			"Noto Sans CJK SC", max(h/40, 14), h/14)
+		// libass 按 288 高的画布换算样式，所以字号和边距写成这个尺度下的值；竖屏字小一点。
+		size := 14
+		if h > w {
+			size = 10
+		}
+		style := fmt.Sprintf("FontName=Noto Sans CJK SC,FontSize=%d,PrimaryColour=&H00FFFFFF,OutlineColour=&H90000000,BorderStyle=1,Outline=1,Shadow=0,MarginV=%d", size, 22)
 		filters = append(filters, fmt.Sprintf("[vcat]subtitles=filename='%s':fontsdir='%s':force_style='%s'[vsub]",
 			escapeFilter(srtPath), escapeFilter(filepath.Dir(lc.font)), style))
 		videoOut = "[vsub]"
@@ -243,7 +247,7 @@ func (lc localComposer) Run(ctx context.Context, job Job) (Outcome, error) {
 		return Outcome{}, &Failure{Code: "COMPOSE_FAILED", Message: "合成失败：" + short(lastLine(string(msg))) + "。请检查片段后重试"}
 	}
 	manifest := map[string]any{"width": w, "height": h, "ratio": spec.Ratio, "resolution": spec.Resolution, "fps": spec.FPS,
-		"duration_ms": int(total * 1000), "clips": len(spec.Clips), "lines": len(spec.Lines), "subtitles": map[bool]string{true: "burn", false: spec.Subtitles}[burned],
+		"duration_ms": int(total * 1000), "clips": len(spec.Clips), "lines": len(spec.Lines), "subtitles": subtitleMode(spec.Subtitles, burned, srt != ""),
 		"bgm": spec.BGM != "", "transition": spec.Transition}
 	if spec.Subtitles == "burn" && !burned {
 		manifest["subtitles_note"] = "服务器没有中文字体，字幕改为内嵌字幕轨（播放器里可开关）"
@@ -284,4 +288,15 @@ func escapeFilter(p string) string {
 func lastLine(s string) string {
 	lines := strings.Split(strings.TrimSpace(s), "\n")
 	return lines[len(lines)-1]
+}
+
+// subtitleMode is what the film actually got: burn falls back to a soft track without a font.
+func subtitleMode(asked string, burned, any bool) string {
+	switch {
+	case !any || asked == "none":
+		return "none"
+	case burned:
+		return "burn"
+	}
+	return "soft"
 }
