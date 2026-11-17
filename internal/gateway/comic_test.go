@@ -230,6 +230,32 @@ func TestComicCreditsChargeRefundAndLimits(t *testing.T) {
 	if l := h.do("GET", "/v1/comic/ledger", token, nil, nil); l.body["balance"].(float64) != 72 {
 		t.Fatalf("balance after cancelling a sent task: %v", l.body["balance"])
 	}
+	// 排队中（还没发给模型）取消全额退：先让 3 个视频占满 MiniMax 的并发，第 4 个只能排队。每个 H3 Highspeed 480P 4 秒 = 12 点。
+	fast := func() map[string]any {
+		return map[string]any{"kind": "video", "model": "minimax-h3-highspeed", "target": "shot:s2/video", "label": "排队",
+			"input": map[string]any{"prompt": "x", "duration": 4, "resolution": "480P", "ratio": "9:16"}}
+	}
+	var busy []string
+	for i := 0; i < 3; i++ {
+		r := h.do("POST", "/v1/comic/projects/"+project+"/tasks", token, fast(), nil)
+		for j := 0; j < 100 && r.str("status") != "running"; j++ {
+			time.Sleep(100 * time.Millisecond)
+			r = h.do("GET", "/v1/comic/tasks/"+r.str("id"), token, nil, nil)
+		}
+		busy = append(busy, r.str("id"))
+	}
+	waiting := h.do("POST", "/v1/comic/projects/"+project+"/tasks", token, fast(), nil)
+	time.Sleep(500 * time.Millisecond)
+	queued := h.do("POST", "/v1/comic/tasks/"+waiting.str("id")+"/cancel", token, nil, nil)
+	if queued.str("status") != "cancelled" || queued.body["refunded"].(float64) != 12 {
+		t.Fatalf("cancel while queued: %d %v", queued.code, queued.body)
+	}
+	for _, id := range busy {
+		h.do("POST", "/v1/comic/tasks/"+id+"/cancel", token, nil, nil)
+	}
+	if l := h.do("GET", "/v1/comic/ledger", token, nil, nil); l.body["balance"].(float64) != 36 {
+		t.Fatalf("balance after queued and sent cancels: %v", l.body["balance"])
+	}
 	// 参数随模型：Seedance Fast 不能选 1080p；没配密钥的模型不可用。
 	bad := h.do("POST", "/v1/comic/estimate", token, map[string]any{"kind": "video", "model": "minimax-h3-highspeed",
 		"input": map[string]any{"prompt": "x", "duration": 5, "resolution": "2K", "ratio": "9:16"}}, nil)

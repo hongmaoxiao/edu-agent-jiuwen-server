@@ -205,16 +205,16 @@ func (s *Service) Cancel(ctx context.Context, r account.Roles, id string) (Task,
 		return t, err
 	}
 	// 规则（用户 2026-11-17 定）：还没发给模型的任务全额退点；已经发给模型的，模型费用已经产生，取消只是不再等结果，不退点。
-	switch t.Status {
-	case "queued":
-		err = s.finish(ctx, id, "cancelled", nil, t.Estimate, "", "已取消，还没发给模型，创作点已全额退回", "取消退回")
-	case "running":
-		err = s.finish(ctx, id, "cancelled", nil, 0, "CANCELLED_AFTER_SEND", "已取消。请求已经发给模型，费用已经产生，按规则不退点", "")
-	default:
-		return t, rejectf("这个任务已经结束，不能取消")
+	// 按读到的状态精确匹配：读到排队、这期间后台恰好发给了模型，就按已发出处理，不退点。
+	done, err := s.finishFrom(ctx, []string{"queued"}, id, "cancelled", nil, t.Estimate, "", "已取消，还没发给模型，创作点已全额退回", "取消退回")
+	if err == nil && !done {
+		done, err = s.finishFrom(ctx, []string{"running"}, id, "cancelled", nil, 0, "CANCELLED_AFTER_SEND", "已取消。请求已经发给模型，费用已经产生，按规则不退点", "")
 	}
 	if err != nil {
 		return t, err
+	}
+	if !done {
+		return t, rejectf("这个任务已经结束，不能取消")
 	}
 	return s.Task(ctx, r, id)
 }
@@ -484,14 +484,21 @@ func (s *Service) complete(ctx context.Context, c claimed, m *Model, job Job, ou
 
 // finish records the end state and any refund in one transaction, exactly once.
 func (s *Service) finish(ctx context.Context, id, status string, result []byte, refund int, code, message, note string) error {
-	return pgx.BeginFunc(ctx, s.db, func(tx pgx.Tx) error {
+	_, err := s.finishFrom(ctx, []string{"queued", "running"}, id, status, result, refund, code, message, note)
+	return err
+}
+
+// finishFrom is finish for a task still in one of the from states; done is false when it had moved on.
+func (s *Service) finishFrom(ctx context.Context, from []string, id, status string, result []byte, refund int, code, message, note string) (done bool, err error) {
+	err = pgx.BeginFunc(ctx, s.db, func(tx pgx.Tx) error {
 		var accountID, label string
 		var estimate int
 		err := tx.QueryRow(ctx, `UPDATE comic_tasks SET status=$2,result=$3,refunded=LEAST($4,estimate),error_code=$5,error_message=$6,finished_at=now(),lease_until=NULL
-			WHERE id=$1 AND status IN ('queued','running') RETURNING account_id,label,estimate`, id, status, result, refund, code, message).Scan(&accountID, &label, &estimate)
+			WHERE id=$1 AND status = ANY($7) RETURNING account_id,label,estimate`, id, status, result, refund, code, message, from).Scan(&accountID, &label, &estimate)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
+		done = true
 		if err != nil {
 			return err
 		}
@@ -501,4 +508,5 @@ func (s *Service) finish(ctx context.Context, id, status string, result []byte, 
 		}
 		return err
 	})
+	return done, err
 }
