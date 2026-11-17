@@ -1,7 +1,7 @@
 {
   "project": "edu-agent-jiuwen-server",
   "current_phase": "P2",
-  "last_updated": "2026-11-05",
+  "last_updated": "2026-11-17",
   "features": [
     {
       "id": "SRV-001",
@@ -65,6 +65,19 @@
       "acceptance": "Mac 上 make check 通过（含 classes_test.go 6 个连库用例）；curl 冒烟：运营开教师（可开班）→ 教师首次登录改密 → 开班 → 批量开 2 个学员 → 学员登录改密后 /v1/me 有该班 → 教师重置学员密码后学员旧会话 401 → 运营停用教师后其会话 401",
       "evidence": [
         "2026-11-05 Grok 本地 PostgreSQL 18.0（嵌入式二进制）：go vet 通过、gofmt 无输出，internal/gateway 20 个用例 PASS（新增 6 个），content、platform 通过；把 manageClass 的权限判断改成恒放行后 3 处断言失败，测试能抓到越权。尚未在 Mac 上验证。"
+      ]
+    },
+    {
+      "id": "COMIC-001",
+      "title": "AI 漫剧制作工作台服务端：真实模型生成、任务、媒体、创作点",
+      "status": "in_progress",
+      "scope": "internal/comic + /v1/comic/*：项目文档（版本乐观锁）、生成任务后台执行（MiniMax H3/H3-Image/语音/音色设计，方舟 Seedance 2.0/Fast、Seedream，DeepSeek 解析），媒体签名链接，ffmpeg 合成 MP4，创作点扣退账本，模拟模型；迁移 007",
+      "depends_on": [
+        "SRV-001"
+      ],
+      "acceptance": "Mac 上 make check 通过（含 comic_test.go）；真实密钥下每个模型最小冒烟一次（最短时长、最低分辨率）并核对扣点；浏览器从新剧本走到下载 MP4",
+      "evidence": [
+        "2026-11-17 Grok 本地 PostgreSQL 16.4：go vet 通过，全部测试 PASS（comic 端到端用模拟模型到 MP4、扣退点、402/409、供应商请求格式）；真实 DeepSeek 解析《迟到的纸飞机》成功（3 镜、台词与说话人正确，扣 2 点）。尚未在 Mac 上验证，MiniMax/方舟待密钥。"
       ]
     }
   ]
