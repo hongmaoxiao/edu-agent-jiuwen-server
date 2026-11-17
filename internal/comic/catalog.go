@@ -112,6 +112,9 @@ func defaultCatalog() []Model {
 		{ID: "sim-speech", Kind: "speech", Provider: "sim", Simulated: true, Name: "模拟配音", Purpose: "按字数生成提示音，不调模型", ETASeconds: 3, Emotions: speechEmotions},
 		{ID: "sim-video", Kind: "video", Provider: "sim", Simulated: true, Name: "模拟视频", Purpose: "用首帧图做推镜测试片，不调模型", ETASeconds: 8,
 			Durations: seconds(2, 15), Resolutions: []string{"480p", "720p"}, Ratios: ratios, NativeAudio: true, AudioToggle: true, FirstFrame: true, MaxRefs: 9},
+		// 能力受限的模拟视频：用来在本机验证「切模型差异」（时长只有 5/10 秒、只出 480p、不收首帧、最多 2 张参考、不出声）。
+		{ID: "sim-video-lite", Kind: "video", Provider: "sim", Simulated: true, Name: "模拟视频（受限）", Purpose: "能力受限的测试模型，不调模型", ETASeconds: 8,
+			Durations: []int{5, 10}, Resolutions: []string{"480p"}, Ratios: ratios, MaxRefs: 2},
 	}
 }
 

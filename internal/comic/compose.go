@@ -54,6 +54,7 @@ type TrackClip struct {
 	FadeIn  float64  `json:"fade_in,omitempty"`
 	FadeOut float64  `json:"fade_out,omitempty"`
 	Loop    bool     `json:"loop,omitempty"` // 音频循环播放到成片结尾（配乐）
+	Fit     string   `json:"fit,omitempty"`  // 视频画幅和成片不同时：pad（默认，缩小留黑边）| crop（放大裁掉多出的部分）
 }
 
 type Subtitle struct {
@@ -170,6 +171,8 @@ func (t *Tracks) check() error {
 			return rejectf("淡入淡出要在 0 到 10 秒之间")
 		case c.Volume != nil && (*c.Volume < 0 || *c.Volume > 2):
 			return rejectf("音量要在 0 到 2 之间")
+		case c.Fit != "" && c.Fit != "pad" && c.Fit != "crop":
+			return rejectf("画幅适配只能是留边（pad）或裁剪（crop）")
 		case c.Loop && c.Role != "music" && c.Role != "ambience":
 			// 规格 V2：不能悄悄循环素材来填缺口，只有音乐和环境声可以铺满。
 			return rejectf("只有音乐和环境声可以循环，%s片段不能循环；长度不够请缩短、定帧或换素材", what)
@@ -332,8 +335,13 @@ func (lc localComposer) Run(ctx context.Context, job Job) (Outcome, error) {
 		d := out - cl.In + cl.Hold
 		total = max(total, cl.Start) + d
 		in := addInput(f.Path, false)
-		v := fmt.Sprintf("[%d:v]trim=start=%s:end=%s,setpts=PTS-STARTPTS,scale=%d:%d:force_original_aspect_ratio=decrease,pad=%d:%d:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=%d,format=yuv420p",
-			in, secs(cl.In), secs(out), w, h, w, h, spec.FPS)
+		// 留边：等比缩小放进画面、补黑边；裁剪：等比放大铺满、裁掉中间以外的部分。都不拉伸。
+		fit := fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=decrease,pad=%d:%d:(ow-iw)/2:(oh-ih)/2:color=black", w, h, w, h)
+		if cl.Fit == "crop" {
+			fit = fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d", w, h, w, h)
+		}
+		v := fmt.Sprintf("[%d:v]trim=start=%s:end=%s,setpts=PTS-STARTPTS,%s,setsar=1,fps=%d,format=yuv420p",
+			in, secs(cl.In), secs(out), fit, spec.FPS)
 		if cl.Hold > 0 {
 			v += ",tpad=stop_mode=clone:stop_duration=" + secs(cl.Hold)
 		}

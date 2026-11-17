@@ -154,6 +154,7 @@ func TestTracksCheck(t *testing.T) {
 		"loudness":    func(c *ComposeSpec) { c.Loudness = -5 },
 		"video loop":  func(c *ComposeSpec) { c.Tracks.Video[0].Loop = true },
 		"voice loop":  func(c *ComposeSpec) { c.Tracks.Audio = []TrackClip{{Media: "a", Role: "dialogue", Loop: true}} },
+		"fit":         func(c *ComposeSpec) { c.Tracks.Video[0].Fit = "stretch" },
 	} {
 		c := ok()
 		bad(c)
@@ -171,5 +172,39 @@ func TestTracksCheck(t *testing.T) {
 		if err := c.check(); err != nil {
 			t.Errorf("%s loop rejected: %v", role, err)
 		}
+	}
+}
+
+// 横版素材进竖版成片：留边上下是黑的，裁剪铺满。
+func TestComposeFitCropOrPad(t *testing.T) {
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		t.Skip("ffmpeg not installed")
+	}
+	work := t.TempDir()
+	clip := filepath.Join(work, "wide.mp4")
+	if out, err := exec.Command("ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "color=c=white:s=426x240:d=1", "-pix_fmt", "yuv420p", clip).CombinedOutput(); err != nil {
+		t.Fatalf("fixture: %v %s", err, out)
+	}
+	files := map[string]File{"v": {Path: clip, Kind: "video", DurationMS: 1000}}
+	top := func(fit string) byte {
+		spec := &ComposeSpec{Ratio: "9:16", Resolution: "480p", Subtitles: "none", Tracks: &Tracks{Video: []TrackClip{{Media: "v", Fit: fit}}}}
+		if err := spec.check(); err != nil {
+			t.Fatal(err)
+		}
+		out, err := localComposer{}.Run(context.Background(), Job{Input: Input{Compose: spec}, Work: t.TempDir(), Files: files})
+		if err != nil {
+			t.Fatal(err)
+		}
+		px, err := exec.Command("ffmpeg", "-v", "error", "-i", out.Files[0].Path, "-frames:v", "1", "-vf", "crop=iw:20:0:0,scale=1:1", "-f", "rawvideo", "-pix_fmt", "gray", "-").Output()
+		if err != nil || len(px) != 1 {
+			t.Fatalf("probe %s: %v", fit, err)
+		}
+		return px[0]
+	}
+	if p := top(""); p > 40 {
+		t.Fatalf("pad: top edge brightness %d, want black bars", p)
+	}
+	if p := top("crop"); p < 200 {
+		t.Fatalf("crop: top edge brightness %d, want the picture filling the frame", p)
 	}
 }

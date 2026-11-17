@@ -77,7 +77,7 @@ func (sim) Check(ctx context.Context, job Job) (Outcome, error) {
 	} else {
 		args = append(args, "-f", "lavfi", "-i", fmt.Sprintf("testsrc2=size=%dx%d:rate=24:duration=%d", w, h, in.Duration))
 	}
-	audio := in.Audio == nil || *in.Audio
+	audio := (in.Audio == nil || *in.Audio) && (job.Model == nil || job.Model.NativeAudio)
 	if audio {
 		args = append(args, "-f", "lavfi", "-i", fmt.Sprintf("sine=frequency=220:sample_rate=44100:duration=%d", in.Duration))
 	}

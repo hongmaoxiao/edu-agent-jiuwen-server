@@ -19,7 +19,7 @@
 | `internal/comic/ark.go` | Seedance 2.0 / Fast（`/api/v3/contents/generations/tasks`）、Seedream 5.5（`/api/v3/images/generations`） |
 | `internal/comic/text.go` | 剧本解析与分镜：OpenAI 兼容接口（默认 DeepSeek），输出 JSON，服务端再规整 |
 | `internal/comic/compose.go` | ffmpeg 合成：按轨道排视频（裁剪、定格、空档补黑）、五类声音轨混音、对白期间压低音乐、响度调整和测量、内嵌或烧录字幕、H.264/AAC MP4 + SRT |
-| `internal/comic/sim.go` | 模拟供应商：`EDU_COMIC_SIMULATE=1` 时出现，生成真实的小文件，不扣点 |
+| `internal/comic/sim.go` | 模拟供应商：`EDU_COMIC_SIMULATE=1` 时出现，生成真实的小文件，不扣点。另有能力受限的 `sim-video-lite`（只有 5/10 秒、480p、不收首帧、最多 2 张参考、不出声），本机验证「切模型差异」用 |
 | `internal/gateway/comic.go` | `/v1/comic/*` 路由 |
 | `migrations/007_comic.sql` | `comic_projects`、`comic_tasks`、`comic_media`、`comic_ledger` |
 | `migrations/008_comic_request_id.sql` | 提交去重用的 `comic_tasks.request_id` |
@@ -102,6 +102,7 @@ Seedance 的价格是按官方 token 计价估算的，拿到真实账单后要�
 
 - 上限：视频 120 段、声音 300 段、字幕 300 条。
 - 校验：视频至少 0.2 秒、声音至少 0.05 秒；定格 ≤ 10 秒；淡入淡出 ≤ 10 秒；音量 0–2。
+- 画幅适配：视频片段 `fit` 为 `pad`（默认，缩小留黑边）或 `crop`（放大铺满、裁掉中间以外）；其他值拒绝。客户端改画幅时选，写在每个视频片段上。
 - 循环：只有 `music`、`ambience` 可以 `loop`。视频和对白、旁白、音效带 `loop` 直接拒绝（400），不能悄悄循环素材来填缺口。
 - 压低：`duck`（-40…0 dB）作用在音乐轨，在对白、旁白片段的时间区间里按 `volume` 的 `enable` 表达式压低。区间是确定的，测试能直接量；没有起落斜坡。
 - 响度：`loudness`（-24…-10 LUFS）填了就用 `loudnorm` 调到目标；不管填没填，成片都再测一次。
