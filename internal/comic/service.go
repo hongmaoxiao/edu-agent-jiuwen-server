@@ -109,7 +109,7 @@ func (s *Service) Catalog(ctx context.Context, r account.Roles) (Catalog, error)
 func (s *Service) balance(ctx context.Context, db *pgxpool.Pool, accountID string) (int, error) {
 	if s.cfg.InitialCredits > 0 {
 		if _, err := db.Exec(ctx, `INSERT INTO comic_ledger(id,account_id,kind,amount,note,created_by)
-			SELECT $1,$2,'grant',$3,'初始额度','system' WHERE NOT EXISTS (SELECT 1 FROM comic_ledger WHERE account_id=$2)`,
+			SELECT $1,$2,'grant',$3,'初始额度','system' WHERE NOT EXISTS (SELECT 1 FROM comic_ledger WHERE account_id=$2 AND created_by='system')`,
 			platform.ID("cl"), accountID, s.cfg.InitialCredits); err != nil {
 			return 0, err
 		}
@@ -161,20 +161,25 @@ func (s *Service) Grant(ctx context.Context, r account.Roles, login string, amou
 	if !r.Operator {
 		return 0, account.ErrForbidden
 	}
+	return GrantByLogin(ctx, s.db, login, amount, note, r.LoginAccountID)
+}
+
+// GrantByLogin is shared by the operator API and cmd/admin comic-grant.
+func GrantByLogin(ctx context.Context, db *pgxpool.Pool, login string, amount int, note, by string) (int, error) {
 	if amount <= 0 || amount > 1_000_000 {
 		return 0, rejectf("额度要是 1 到 1000000 之间的整数")
 	}
 	var id string
-	if err := s.db.QueryRow(ctx, "SELECT id FROM accounts WHERE login=$1", login).Scan(&id); errors.Is(err, pgx.ErrNoRows) {
+	if err := db.QueryRow(ctx, "SELECT id FROM accounts WHERE login=$1", strings.ToLower(strings.TrimSpace(login))).Scan(&id); errors.Is(err, pgx.ErrNoRows) {
 		return 0, ErrNotFound
 	} else if err != nil {
 		return 0, err
 	}
-	if _, err := s.db.Exec(ctx, `INSERT INTO comic_ledger(id,account_id,kind,amount,note,created_by) VALUES ($1,$2,'grant',$3,$4,$5)`,
-		platform.ID("cl"), id, amount, firstNonEmpty(note, "加额度"), r.LoginAccountID); err != nil {
+	if _, err := db.Exec(ctx, `INSERT INTO comic_ledger(id,account_id,kind,amount,note,created_by) VALUES ($1,$2,'grant',$3,$4,$5)`,
+		platform.ID("cl"), id, amount, firstNonEmpty(note, "加额度"), by); err != nil {
 		return 0, err
 	}
-	return balanceOf(ctx, s.db, id)
+	return balanceOf(ctx, db, id)
 }
 
 // ---------- 项目 ----------
