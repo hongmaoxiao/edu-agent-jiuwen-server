@@ -52,7 +52,7 @@ for pair in minimax:EDU_COMIC_MINIMAX_KEY_FILE ark:EDU_COMIC_ARK_KEY_FILE deepse
     export "${pair#*:}=$file"
     echo "密钥：${pair%%:*} 已配置"
   else
-    echo "密钥：${pair%%:*} 未配置（$file），这家模型显示「暂不可用」"
+    echo "密钥：${pair%%:*} 未配置（${file}），这家模型显示「暂不可用」"
   fi
 done
 # 烧录字幕用的中文字体；找不到就改成内嵌字幕轨。

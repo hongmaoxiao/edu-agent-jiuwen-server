@@ -107,6 +107,10 @@ func (p *textModel) Run(ctx context.Context, job Job) (Outcome, error) {
 			{"role": "user", "content": user.String()},
 		},
 	}
+	// M3 supports direct answers; structured breakdowns do not need thinking tokens.
+	if job.Model.remote == "MiniMax-M3" {
+		body["thinking"] = map[string]string{"type": "disabled"}
+	}
 	var out struct {
 		Choices []struct {
 			FinishReason string `json:"finish_reason"`
