@@ -141,6 +141,25 @@ func TestComicStudioEndToEndWithSimulatedModels(t *testing.T) {
 		t.Fatalf("film duration %v", d)
 	}
 
+	// 剪辑台的多轨格式：片段按开始时间排（中间空 0.5 秒），对白和字幕各自定位，配乐压低，成片说明里有响度。
+	multi := h.submit(token, project, map[string]any{"kind": "compose", "model": "compose", "target": "project/export", "label": "导出成片（多轨）",
+		"input": map[string]any{"compose": map[string]any{"ratio": "9:16", "resolution": "480p", "subtitles": "soft", "tracks": map[string]any{
+			"video":     []any{map[string]any{"media": clip, "start": 0, "out": 2}, map[string]any{"media": clip, "start": 2.5, "in": 1, "out": 3}},
+			"audio":     []any{map[string]any{"media": line, "role": "dialogue", "start": 0.4}, map[string]any{"media": line, "role": "narration", "start": 3, "volume": 0.8}},
+			"subtitles": []any{map[string]any{"start": 0.4, "end": 1.8, "text": "这一次，我想试试。"}},
+			"duck":      -12}}}})
+	if multi.str("status") != "succeeded" {
+		t.Fatalf("multi-track compose: %v", multi.body)
+	}
+	mm := multi.body["result"].(map[string]any)["manifest"].(map[string]any)
+	if mm["duration_ms"].(float64) != 4500 || mm["clips"].(float64) != 2 || mm["subtitle_count"].(float64) != 1 || mm["loudness_lufs"] == nil {
+		t.Fatalf("multi-track manifest: %v", mm)
+	}
+	if bad := h.do("POST", "/v1/comic/projects/"+project+"/tasks", token, map[string]any{"kind": "compose", "model": "compose", "target": "project/export", "label": "x",
+		"input": map[string]any{"compose": map[string]any{"ratio": "9:16", "resolution": "480p", "tracks": map[string]any{"video": []any{map[string]any{"media": clip, "start": -1}}}}}}, nil); bad.code != 400 {
+		t.Fatalf("negative start accepted: %d %v", bad.code, bad.body)
+	}
+
 	// 勾了清洁版：另存一份不算导出版本的无字幕 MP4。
 	cleanID, _ := film.body["result"].(map[string]any)["clean_media"].(string)
 	if cleanID == "" {
