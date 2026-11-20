@@ -20,10 +20,6 @@ CATEGORIES = [
      'summary': '面向企业 AI 交付：从场景判断、知识工程到智能体部署上线。',
      'flow': [{'label': '场景', 'icon': 'Compass'}, {'label': '知识', 'icon': 'Library'},
               {'label': '智能体', 'icon': 'Bot'}, {'label': '交付', 'icon': 'Rocket'}]},
-    {'id': 'ai-comic', 'title': 'AI 漫剧项目', 'eyebrow': 'AI Comic Drama', 'status': 'coming_soon',
-     'summary': '用 AI 完成剧本、分镜、角色与成片，做出一部完整的漫剧。',
-     'flow': [{'label': '剧本', 'icon': 'ScrollText'}, {'label': '分镜', 'icon': 'LayoutGrid'},
-              {'label': '角色', 'icon': 'Palette'}, {'label': '成片', 'icon': 'Clapperboard'}]},
 ]
 
 

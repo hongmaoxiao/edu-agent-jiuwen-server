@@ -5,7 +5,6 @@
 //	admin set-password <login>                     # replace an account's password (standard input) and end its sessions
 //	admin demo-reset <login>                       # remove everything opened during demos, keep the school and personas
 //	admin import-content <file>                    # import courses, labs, guides and rubrics (seed/fde-content.json); safe to rerun
-//	admin comic-grant <login> <amount> [note]      # add AI 漫剧 创作点 to an account (demo personas are <demo>.student etc.)
 package main
 
 import (
@@ -14,12 +13,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
 	"edu-agent-jiuwen-server/internal/account"
-	"edu-agent-jiuwen-server/internal/comic"
 	"edu-agent-jiuwen-server/internal/content"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -33,7 +30,7 @@ func main() {
 }
 
 func run(args []string) error {
-	usage := fmt.Errorf("usage: admin create-operator|create-demo <login> <display name>  (password on standard input)\n       admin set-password <login>  (password on standard input)\n       admin demo-reset <login>\n       admin import-content <file>\n       admin comic-grant <login> <amount> [note]\n       admin comic-settle <task id> charge|refund [note]  (结果待核对的任务：模型收到了就 charge，没收到就 refund)")
+	usage := fmt.Errorf("usage: admin create-operator|create-demo <login> <display name>  (password on standard input)\n       admin set-password <login>  (password on standard input)\n       admin demo-reset <login>\n       admin import-content <file>")
 	if len(args) == 0 {
 		return usage
 	}
@@ -79,39 +76,6 @@ func run(args []string) error {
 			return err
 		}
 		fmt.Printf("%s: %s created (%s)\n", args[0], created.Login, created.ID)
-	case args[0] == "comic-grant" && (len(args) == 3 || len(args) == 4):
-		amount, err := strconv.Atoi(args[2])
-		if err != nil {
-			return fmt.Errorf("amount must be a whole number")
-		}
-		note := ""
-		if len(args) == 4 {
-			note = args[3]
-		}
-		db, err := connect()
-		if err != nil {
-			return err
-		}
-		defer db.Close()
-		balance, err := comic.GrantByLogin(ctx, db, args[1], amount, note, "admin")
-		if err != nil {
-			return err
-		}
-		fmt.Printf("comic-grant: %s now has %d 创作点\n", args[1], balance)
-	case args[0] == "comic-settle" && (len(args) == 3 || len(args) == 4) && (args[2] == "charge" || args[2] == "refund"):
-		note := ""
-		if len(args) == 4 {
-			note = args[3]
-		}
-		db, err := connect()
-		if err != nil {
-			return err
-		}
-		defer db.Close()
-		if err := comic.SettleTask(ctx, db, args[1], args[2] == "charge", note); err != nil {
-			return err
-		}
-		fmt.Printf("comic-settle: %s %s\n", args[1], args[2])
 	case args[0] == "set-password" && len(args) == 2:
 		password, err := readPassword()
 		if err != nil {

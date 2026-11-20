@@ -28,7 +28,7 @@ func TestCORS(t *testing.T) {
 	if web.Code != 204 || web.Header().Get("Access-Control-Allow-Origin") != "https://agent.hrtiger.cn" || web.Header().Get("Access-Control-Allow-Credentials") != "true" {
 		t.Errorf("web origin preflight: %d %v", web.Code, web.Header())
 	}
-	// 漫剧保存项目、教师评分都用 PUT，网页和接口不同源，预检必须放行。
+	// 教师评分用 PUT /v1/review，网页和接口不同源，预检必须放行。
 	if !strings.Contains(web.Header().Get("Access-Control-Allow-Methods"), "PUT") {
 		t.Errorf("PUT not allowed cross-origin: %v", web.Header().Get("Access-Control-Allow-Methods"))
 	}

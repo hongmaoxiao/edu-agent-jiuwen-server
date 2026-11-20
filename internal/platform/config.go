@@ -33,18 +33,6 @@ type Config struct {
 	WorkspaceLimit int
 	// 多久没人用就停容器（EDU_WORKSPACE_IDLE，如 30m），数据保留。
 	WorkspaceIdle time.Duration
-	// AI 漫剧（docs/comic-studio.md）。EDU_COMIC_MEDIA_DIR 为空时不开漫剧接口。
-	ComicMediaDir       string
-	ComicInitialCredits int
-	ComicSimulate       bool
-	ComicMiniMaxBase    string
-	ComicMiniMaxKey     string
-	ComicArkBase        string
-	ComicArkKey         string
-	ComicTextBase       string
-	ComicTextKey        string
-	ComicTextModel      string
-	ComicSubtitleFont   string
 }
 
 func env(key, fallback string) string {
@@ -86,46 +74,7 @@ func LoadConfig() (Config, error) {
 	if c.MinClientVersion != "" && !ValidVersion(c.MinClientVersion) {
 		return c, fmt.Errorf("EDU_MIN_CLIENT_VERSION must look like 1.2.0")
 	}
-	if err := c.loadComic(); err != nil {
-		return c, err
-	}
 	return c, c.loadWorkspace()
-}
-
-// secret reads a key from the file named by name (密钥只放文件，不放环境变量值，免得进进程列表和日志)。
-func secret(name string) (string, error) {
-	path := os.Getenv(name)
-	if path == "" {
-		return "", nil
-	}
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return "", fmt.Errorf("%s: cannot read the key file", name)
-	}
-	return strings.TrimSpace(string(raw)), nil
-}
-
-func (c *Config) loadComic() error {
-	c.ComicMediaDir = os.Getenv("EDU_COMIC_MEDIA_DIR")
-	if c.ComicMediaDir == "" {
-		return nil
-	}
-	var err error
-	if c.ComicInitialCredits, err = strconv.Atoi(env("EDU_COMIC_INITIAL_CREDITS", "300")); err != nil || c.ComicInitialCredits < 0 {
-		return fmt.Errorf("EDU_COMIC_INITIAL_CREDITS must be a number of at least 0")
-	}
-	c.ComicSimulate = env("EDU_COMIC_SIMULATE", "") == "1"
-	c.ComicMiniMaxBase = env("EDU_COMIC_MINIMAX_BASE", "https://api.minimax.cn")
-	c.ComicArkBase = env("EDU_COMIC_ARK_BASE", "https://ark.cn-beijing.volces.com")
-	c.ComicTextBase = env("EDU_COMIC_TEXT_BASE", "https://api.deepseek.com")
-	c.ComicTextModel = env("EDU_COMIC_TEXT_MODEL", "deepseek-chat")
-	c.ComicSubtitleFont = os.Getenv("EDU_COMIC_SUBTITLE_FONT")
-	for name, into := range map[string]*string{"EDU_COMIC_MINIMAX_KEY_FILE": &c.ComicMiniMaxKey, "EDU_COMIC_ARK_KEY_FILE": &c.ComicArkKey, "EDU_COMIC_TEXT_KEY_FILE": &c.ComicTextKey} {
-		if *into, err = secret(name); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (c *Config) loadWorkspace() error {

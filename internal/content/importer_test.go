@@ -26,7 +26,7 @@ func seed(t *testing.T) Export {
 func TestSeedIsComplete(t *testing.T) {
 	e := seed(t)
 	course := e.Courses[0]
-	if len(e.Categories) != 2 || len(course.Chapters) != 10 || len(course.Labs) != 51 {
+	if len(e.Categories) != 1 || len(course.Chapters) != 10 || len(course.Labs) != 51 {
 		t.Fatalf("categories %d, chapters %d, labs %d", len(e.Categories), len(course.Chapters), len(course.Labs))
 	}
 	for _, lab := range course.Labs {
@@ -62,7 +62,7 @@ func TestImportIsRepeatableAndKeepsLocalEdits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if first.Categories.Created != 2 || first.Courses.Created != 1 || first.Chapters.Created != 10 || first.Labs.Created != 51 || first.Rubrics.Created != 1 {
+	if first.Categories.Created != 1 || first.Courses.Created != 1 || first.Chapters.Created != 10 || first.Labs.Created != 51 || first.Rubrics.Created != 1 {
 		t.Fatalf("first import: %+v", first)
 	}
 	var steps, labsWithGuide int
@@ -73,7 +73,7 @@ func TestImportIsRepeatableAndKeepsLocalEdits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if again.Categories.Unchanged != 2 || again.Courses.Unchanged != 1 || again.Chapters.Unchanged != 10 || again.Labs.Unchanged != 51 || again.Rubrics.Unchanged != 1 {
+	if again.Categories.Unchanged != 1 || again.Courses.Unchanged != 1 || again.Chapters.Unchanged != 10 || again.Labs.Unchanged != 51 || again.Rubrics.Unchanged != 1 {
 		t.Fatalf("rerun must change nothing: %+v", again)
 	}
 
